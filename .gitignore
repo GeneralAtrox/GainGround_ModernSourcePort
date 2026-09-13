@@ -14,6 +14,7 @@
 !/native/tests/
 !/native/third_party/
 /native/generated/gground_game_definitions.cpp
+/native/generated/native-codegen-manifest.json
 !/scripts/
 /scripts/*
 !/scripts/Build-Source.ps1
