@@ -1,0 +1,20 @@
+#include "gain_ground/contract_types.h"
+#include "gground_functions.h"
+#include <cstdint>
+namespace gain_ground::translated { namespace {
+constexpr std::uint16_t P=1,S=3,O=8,W=0xffff; constexpr std::uint32_t SM=0x3ffff;
+void pf(ExecutionHost&h,std::uint32_t a){(void)h.read_memory_word(P,a,W);} std::uint16_t rs(ExecutionHost&h,std::uint32_t a){return h.read_memory_word(S,a&SM,W);} void ws(ExecutionHost&h,std::uint32_t a,std::uint16_t v){h.write_memory_word(S,a&SM,v,W);}
+std::uint8_t rb(ExecutionHost&h,std::uint32_t a){auto v=h.read_memory_word(P,a&~1U,(a&1)?0x00ff:0xff00);return static_cast<std::uint8_t>((a&1)?v:v>>8);}
+void logic(CpuRegisters&r,std::uint32_t v,std::uint32_t s){std::uint16_t f=r.status&0x10;if(v&s)f|=8;if(!v)f|=4;r.status=static_cast<std::uint16_t>((r.status&~0x1f)|f);}
+void addb(CpuRegisters&r){auto a=static_cast<std::uint8_t>(r.data[0]);auto v=static_cast<std::uint8_t>(a+a);bool c=unsigned(a)+a>255,o=((~(a^a)&(a^v))&0x80)!=0;r.data[0]=(r.data[0]&0xffffff00)|v;std::uint16_t f=0;if(c)f|=0x11;if(v&0x80)f|=8;if(!v)f|=4;if(o)f|=2;r.status=static_cast<std::uint16_t>((r.status&~0x1f)|f);}
+void roxl(CpuRegisters&r){std::uint32_t ring=(static_cast<std::uint16_t>(r.data[1])<<1)|((r.status>>4)&1);ring=((ring<<4)|(ring>>13))&0x1ffff;auto v=static_cast<std::uint16_t>(ring>>1);bool x=ring&1;r.data[1]=(r.data[1]&0xffff0000)|v;std::uint16_t f=x?0x11:0;if(v&0x8000)f|=8;if(!v)f|=4;r.status=static_cast<std::uint16_t>((r.status&~0x1f)|f);}
+void addx(CpuRegisters&r){auto a=static_cast<std::uint16_t>(r.data[1]);auto sum=std::uint32_t(a)+a+((r.status>>4)&1);auto v=static_cast<std::uint16_t>(sum);bool c=sum>0xffff,o=((~(a^a)&(a^v))&0x8000)!=0,z=r.status&4;r.data[1]=(r.data[1]&0xffff0000)|v;std::uint16_t f=0;if(c)f|=0x11;if(v&0x8000)f|=8;if(!v&&z)f|=4;if(o)f|=2;r.status=static_cast<std::uint16_t>((r.status&~0x1f)|f);}
+bool irq(FunctionContext&c,std::uint32_t pc,std::uint32_t next){auto&h=*c.host;auto&r=c.registers;auto p=h.consume_pending_interrupt(0,0xff,pc);if(!p.asserted||p.level<=((r.status>>8)&7))return false;pf(h,next+2);auto sr=r.status;r.address[7]-=4;ws(h,r.address[7]+2,static_cast<std::uint16_t>(next));r.address[7]-=2;ws(h,r.address[7],sr);ws(h,r.address[7]+2,static_cast<std::uint16_t>(next>>16));r.status=static_cast<std::uint16_t>((sr&0x38ff)|0x2000|(p.level<<8));pf(h,0x70);pf(h,0x72);(void)rs(h,0x48);(void)rs(h,0x4a);r.program_counter=0x80048;(void)h.call_function(47,0,0xff,0,pc,0x80048,c);(void)cpu_a_irq4_vector_trampoline(c);r.program_counter=next;return true;}
+void out(FunctionContext&c){auto&h=*c.host;auto&r=c.registers;h.write_memory_word(O,r.address[2]-0x280000,static_cast<std::uint16_t>(r.data[1]),W);r.address[2]+=2;logic(r,static_cast<std::uint16_t>(r.data[1]),0x8000);}
+}
+FunctionResult cpu_a_decode_byte_nibbles_to_words(FunctionContext&c) noexcept {if(!c.host)return{TranslationStatus::contract_violation,0,c.registers.program_counter};auto&h=*c.host;auto&r=c.registers;r.data[2]=7;logic(r,7,0x80000000);pf(h,0x1c2c);
+for(;;){auto b=rb(h,r.address[1]++);r.data[0]=(r.data[0]&0xffffff00)|b;logic(r,b,0x80);pf(h,0x1c2e);r.data[1]=0;logic(r,0,0x80000000);pf(h,0x1c30);
+addb(r);pf(h,0x1c32);roxl(r);pf(h,0x1c34);addb(r);pf(h,0x1c36);roxl(r);pf(h,0x1c38);addb(r);pf(h,0x1c3a);roxl(r);pf(h,0x1c3c);addb(r);pf(h,0x1c3e);addx(r);pf(h,0x1c40);out(c);auto i=irq(c,0x1c3e,0x1c40);
+auto d=r.data[1];r.data[1]=(d<<16)|(d>>16);logic(r,r.data[1],0x80000000);if(!i)pf(h,0x1c42);addb(r);pf(h,0x1c44);auto j=irq(c,0x1c42,0x1c44);roxl(r);if(!j)pf(h,0x1c46);addb(r);pf(h,0x1c48);roxl(r);pf(h,0x1c4a);addb(r);pf(h,0x1c4c);roxl(r);pf(h,0x1c4e);addb(r);pf(h,0x1c50);addx(r);pf(h,0x1c52);pf(h,0x1c54);out(c);pf(h,0x1c56);auto n=static_cast<std::uint16_t>(r.data[2]-1);r.data[2]=(r.data[2]&0xffff0000)|n;pf(h,0x1c2a);if(n==0xffff)break;pf(h,0x1c2c);}
+pf(h,0x1c58);pf(h,0x1c5a);auto sp=r.address[7]&SM;auto target=(std::uint32_t(rs(h,sp))<<16)|rs(h,sp+2);r.address[7]+=4;pf(h,target);pf(h,target+2);r.program_counter=target;return FunctionResult::complete(1,target);}
+} // namespace gain_ground::translated
