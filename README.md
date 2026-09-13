@@ -9,8 +9,8 @@ Removing game data is not legal clearance of the translated code. See
 [NOTICE.md](NOTICE.md) for provenance and licensing limits.
 
 ## Improvements
-New pathfinding model stops characters getting stuck on each other, on geometry and on their restricted play area
-Added ability to change white noise title screen music
+- New pathfinding model stops characters getting stuck on each other, on geometry and on their restricted play area.
+- Added ability to change white noise title screen music
 
 ## Build
 
