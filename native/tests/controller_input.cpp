@@ -10,6 +10,18 @@ unsigned port(System24Devices &d,unsigned p){return *d.read(0x800000+p*2,0xff);}
 }
 int main(){try{
     System24Devices d;RuntimeKeyboard input;std::array<RuntimePad,3> pads;
+    for(const auto [key,bit]:std::array<std::pair<unsigned,unsigned>,8>{{
+        {'W',0x20},{'A',0x80},{'S',0x10},{'D',0x40},
+        {'Q',2},{'E',4},{'F',1},{0x0d,2}}}) {
+        check(input.key(d,key,true),"Default key was not mapped");
+        check(port(d,0)==(255U&~bit),"Default key drove the wrong action");
+        check(port(d,1)==255 && port(d,2)==255,"Keyboard controlled another player");
+        check(port(d,4)==(bit==1 ? 254U:255U),"Keyboard drove the wrong coin slot");
+        input.key(d,key,false);
+        check(port(d,0)==255 && port(d,4)==255,"Key release left input held");
+    }
+    for(unsigned key:std::array<unsigned,11>{'1','2','5','6','7','Z','X',0x25,0x26,0x27,0x28})
+        check(!input.key(d,key,true),"Legacy keyboard binding remains enabled");
     std::vector<std::tuple<unsigned,bool>> journal;
     const auto sample=[&](unsigned p,RuntimePadState s,bool focus=true,bool enabled=true){
         return pads[p].update(s,focus,enabled,[&](unsigned bit,bool pressed){
@@ -20,11 +32,11 @@ int main(){try{
     for(unsigned p=0;p<3;++p)check((port(d,p)&0x43)==0,"Controller did not drive its player slot");
     check((port(d,4)&0x43)==0,"Three independent coin inputs missing");
     sample(1,{});check(port(d,1)==255 && (port(d,0)&2)==0 && (port(d,2)&2)==0,"Disconnect reassigned or released another player");
-    input.key(d,'Z',true);sample(0,{});check(!(port(d,0)&2),"Disconnect released held keyboard action");
-    input.key(d,RuntimeKeyboard::mouse_primary,true);input.key(d,'Z',false);check(!(port(d,0)&2),"Keyboard release cancelled mouse");
+    input.key(d,'Q',true);sample(0,{});check(!(port(d,0)&2),"Disconnect released held keyboard action");
+    input.key(d,RuntimeKeyboard::mouse_primary,true);input.key(d,'Q',false);check(!(port(d,0)&2),"Keyboard release cancelled mouse");
     sample(0,{true,0x1000,0,0});input.key(d,RuntimeKeyboard::mouse_primary,false);check(!(port(d,0)&2),"Mouse release cancelled controller");
-    sample(0,{true,0,20000,0});input.key(d,0x25,true);check((port(d,0)&0xc0)==0xc0,"Opposite devices produced invalid direction");
-    input.key(d,0x25,false);check(!(port(d,0)&0x40),"Direction did not resume after opposite release");
+    sample(0,{true,0,20000,0});input.key(d,'A',true);check((port(d,0)&0xc0)==0xc0,"Opposite devices produced invalid direction");
+    input.key(d,'A',false);check(!(port(d,0)&0x40),"Direction did not resume after opposite release");
     sample(0,{true,0,8000,0});check(!(port(d,0)&0x40),"Stick hysteresis lost held direction");
     sample(0,{true,0,6000,0});check((port(d,0)&0xf0)==0xf0,"Stick drift was not released");
     sample(0,{true,0,8000,0});check((port(d,0)&0xf0)==0xf0,"Stick drift entered movement");

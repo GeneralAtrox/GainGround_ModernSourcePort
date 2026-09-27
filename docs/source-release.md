@@ -136,3 +136,119 @@ Automatic approval review rejected the guarded cleanup of
 `.tmp/github-release-20260927-59f105c` as "blocked by policy". The temporary
 source export and build remain local and excluded from Git. No alternate
 deletion or retry was attempted.
+
+## Local controls update — 2026-09-27
+
+The user requested player-1-only WASD movement, Q/E attacks, F credits, and an
+unlimited-credits option. Enter remains a player 1 join/primary-action alias.
+Legacy arrow, Z/X and number-key bindings are disabled. Controllers keep their
+three independent slots. Unlimited credits is a session menu toggle, off by
+default, using the existing credit eligibility paths and preserving the credit
+balance and partial coins during activation. This is an intentional gameplay
+customization, including the explicit opt-in to skip F184 credit consumption.
+
+The Release runtime built successfully with GNU C++ 16.2.0. Both focused CTest
+targets passed: `gain_ground_controller_input` and `gain_ground_player_start_input`
+(24 combinations of player, button, balance and unlimited-credit mode). These
+cover keyboard isolation, removed bindings, mixed input sources, controller
+pause/focus handling, activation with zero credits, ordinary spending, and
+restoration of the underlying setting when disabled. No full gameplay or
+parity campaign was run. The local playable package is retained at
+`run/keyboard-credits-20260927/`; this update is not yet published to GitHub.
+
+Automatic approval review rejected guarded removal of
+`.tmp/keyboard-credits-20260927` as "blocked by policy". Build intermediates
+remain local and ignored; no retry or alternate deletion was attempted.
+
+## All-character crash smoke test — 2026-09-27
+
+The reported CPU-B stop at `0x12742` is reproducible by the saved-actor replay:
+the runtime has no exact native entry for that projectile callback. The new
+`check_characters` target tests all 20 characters through four-direction
+movement preparation and 180-update primary/secondary attack cases. It runs
+spawned actors through the real registry, reports the failing character and
+callback, times out individual cases after five seconds, and continues after
+failures. Setup and coverage limits are in `native/README.md`.
+
+The initial run completed in 0.52 seconds after compilation: **55/60 passed**.
+The final `check_characters` target reproduced the same results in 0.73 seconds
+and correctly returned a failing exit status.
+All movement and primary-attack cases passed. Secondary attacks failed for:
+
+| Character ID | Missing callback | First failing update |
+| --- | --- | --- |
+| 12 | `0x1249C` | 5 |
+| 14 | `0x12598` | 5 |
+| 15 | `0x1264A` | 5 |
+| 18 | `0x12742` | 4 |
+| 19 | `0x12742` | 4 |
+
+This change adds tests and diagnosis; these four missing callback bodies remain
+unfixed. No production native code was changed for this request. The controlled
+test uses the existing private `run/last-native-failure` snapshot, whose hashes
+at validation were:
+
+- CPU-B RAM: `5d36088118ec3452496e84f1be14cad8e54ebbb27b376fb3f54927c509486572`
+- Shared RAM: `15574eb293a8674ece27d0361d78690a4707079829f5a02c868921282446b791`
+
+It is not a full-game or parity validation. The earlier keyboard/credit changes
+remain in the working tree and were included in the linked test library.
+
+Automatic approval review rejected guarded cleanup of
+`.tmp/character-smoke-20260927` as "blocked by policy". Its test binaries,
+intermediates and temporary logs remain local and ignored. No retry or alternate
+deletion was attempted.
+
+## Character projectile crash repair — 2026-09-27
+
+The user authorized repairing the five failures found by the character smoke
+test. Added original CPU-B callbacks `0x1249C`, `0x12598`, `0x1264A`, `0x12742`
+and the required child `0x12AD2` as native IDs 955–959. The original descriptor
+pointers are at `0x11D06`, `0x11D42`, `0x11D70`, `0x11DD6` and `0x11DE6`.
+The last two select the same callback for characters 18 and 19.
+
+The retained opcode generator emits 209 instructions across the five entries,
+including the shared `0x12610`/`0x1263A` tails and all three original `0x1275C`
+branch-table slots. It validates the descriptor pointers and source-image hashes.
+The memory arithmetic shift at `0x127A0` retains the sign and updates X/C from
+the shifted-out bit. The projectile collision calls preserve the existing
+nonlocal-return convention: when F257/F258 have already returned to the actor
+scheduler, complete that invocation without popping its stack again.
+All 312 previously generated callback bodies remain text-identical.
+
+Validation: Release compilation/link succeeded. The 60 character smoke cases
+now pass, including all five previously failing secondary attacks. The saved
+`0x12742` crash invocation also passes with PC `0x8594`, SP `0x7FFE`, control 1
+and no fault. The final combined **61/61** CTest run took **1.14 seconds**.
+The first repaired run exposed the character-14 nonlocal return at update 29;
+that regression now passes with the actual child and exact outer PC/SP checks.
+Tests are included under `native-child-boundary` when the private snapshot is
+configured. This is bounded crash validation, not a full-game or timing-parity
+claim; no fixture captures exist for the new callback IDs.
+
+The earlier rejected cleanup of `.tmp/character-smoke-20260927` remains in
+effect. Its existing build was reused for this repair; no cleanup retry was
+attempted. A playable package is retained at `run/projectile-crash-fix-20260927/`.
+The root `launch.bat` also builds the repaired source. Nothing has been pushed
+or published to GitHub as part of this repair.
+
+Playable EXE SHA-256:
+`8c0575acc51cd7cc922e556ce1b120c8207e801cdda1a850b98ab73c8ddb04ca`.
+
+## Windows release revision 2 — 2026-09-27
+
+Release `build-2026-09-27-r2` includes the player-1 keyboard controls,
+unlimited-credits option, root `launch.bat`, character projectile crash repairs,
+and steady foreground transparency. The previous release remains available.
+The release tag identifies the corresponding source on `main`; the attached
+Windows ZIP contains the executable, four runtime DLLs, third-party notices,
+launch instructions and a manifest identifying that source commit.
+
+The packaged Release executable is the validated modern-transparency build,
+SHA-256 `b38202a6a150397767494ed0694bc473c32fe64998026e454d7590f95129af07`.
+Validation for these changes consists of the two input/credit targets, all 60
+character smoke cases plus the saved crash, the focused transparency regression,
+and re-rendering 57 captured Stage 6 scenes. The latter removes all alternate-frame
+upper-body disappearance, retaining the four normal animation transitions.
+No full-game or exact-parity claim is made. ROMs and private captures are excluded
+from both the source commit and release package.

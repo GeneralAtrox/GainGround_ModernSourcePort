@@ -11,6 +11,9 @@ Removing game data is not legal clearance of the translated code. See
 ## Improvements
 - New pathfinding model stops characters getting stuck on each other, on geometry and on their restricted play area.
 - Added ability to change white noise title screen music
+- Steady foreground transparency replaces alternate-frame wall flicker.
+- Player 1 keyboard controls use WASD/Q/E/F, with an optional unlimited-credits mode.
+- Fixed secondary-attack projectile crashes affecting five character IDs.
 
 ## Build
 
@@ -21,6 +24,13 @@ DLLs beside it. Supply your own supported ROM set on first launch.
 
 Requirements: Windows, CMake 3.24+, Ninja, a C++20 compiler and zlib development
 files. With the MSYS2 UCRT64 toolchain installed at `C:\msys64\ucrt64`:
+
+Double-click **`launch.bat`** at the project root to build the game and open it.
+It reuses `build/launcher` for incremental builds and leaves errors visible if
+the build fails. Set `GAIN_GROUND_TOOLCHAIN_ROOT` if MSYS2 UCRT64 is installed
+elsewhere. CMake and Ninja must be on PATH.
+
+For a manual build and test run:
 
 ```powershell
 $env:Path = 'C:\msys64\ucrt64\bin;' + $env:Path
@@ -65,6 +75,16 @@ Advanced local research can still use:
 Three players share the stage. Keyboard controls player 1; Xbox controllers 1-3
 control the matching slots. Press **P** or use the Pause menu to pause; the title
 changes to **Gain Ground - Paused**.
+
+Keyboard controls are exclusively for player 1: **WASD** moves, **Q** uses the
+small attack, **E** uses the bigger attack, and **F** adds a credit. Press
+**Enter** (or an attack button) to join/start. **Esc** exits. Left/right mouse
+buttons also perform the two attacks. The old arrow, Z/X and number-key
+bindings are disabled; additional players use controllers.
+
+Toggle **Unlimited credits** in the menu to start and continue without spending
+credits. It is off at launch and applies to all players for the current session.
+Switch it off to return to the normal credit balance.
 
 The **Stage** menu jumps to a chosen stage (Round 1-4, Stage 1-10). During play
 the current stage ends at once through the game's own stage-clear sequence and

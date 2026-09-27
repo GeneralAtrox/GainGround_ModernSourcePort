@@ -4,6 +4,7 @@
 !/.gitattributes
 !/README.md
 !/NOTICE.md
+!/launch.bat
 !/native/
 /native/*
 !/native/CMakeLists.txt

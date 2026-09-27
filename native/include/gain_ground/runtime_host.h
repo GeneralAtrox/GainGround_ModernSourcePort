@@ -84,6 +84,8 @@ public:
     // the original movement, contact and terrain code.
     void set_player_invulnerable(bool on) noexcept { invulnerable_ = on; }
     bool player_invulnerable() const noexcept override { return invulnerable_; }
+    void set_unlimited_credits(bool on) noexcept { unlimited_credits_ = on; }
+    bool unlimited_credits() const noexcept override { return unlimited_credits_; }
     [[nodiscard]] std::uint32_t player_record(unsigned player) const noexcept {
         return player < player_records_.size() ? player_records_[player] : 0U;
     }
@@ -166,6 +168,7 @@ private:
     bool start_stage_force_{};
     bool start_stage_applied_{};
     bool invulnerable_{};
+    bool unlimited_credits_{};
     std::array<std::uint32_t, 4> player_records_{};
     System24Devices *devices_{};
     bool waiting_{};

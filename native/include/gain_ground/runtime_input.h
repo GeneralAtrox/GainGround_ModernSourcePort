@@ -4,7 +4,7 @@
 
 namespace gain_ground {
 // Gain Ground's activation code at FA9E..FAAA tests player button bits 0x06,
-// not the generic SERVICE-port START bits. Enter/1/2 alias button 1.
+// not the generic SERVICE-port START bits. Enter aliases player 1's small attack.
 inline void set_start_input(System24Devices &devices, unsigned player, bool pressed)
 {
     if (player < 3U) devices.input(player, 0x02U, pressed);
@@ -31,9 +31,8 @@ private:
     static bool mapped(unsigned key) {
         if(key==mouse_primary || key==mouse_secondary || (key>=0x110 && key<0x128))return true;
         switch (key) {
-        case '1': case '2': case '5': case '6': case '7':
-        case 'Z': case 'X': case 0x0d: // Enter aliases the first action.
-        case 0x25: case 0x26: case 0x27: case 0x28: return true;
+        case 'W': case 'A': case 'S': case 'D':
+        case 'Q': case 'E': case 'F': case 0x0d: return true;
         default: return false;
         }
     }
@@ -41,16 +40,13 @@ private:
         std::array<unsigned,3> bits{};
         for(unsigned p=0;p<3;++p)for(unsigned bit=0;bit<8;++bit)
             if(held_[gamepad_key(p,bit)])bits[p]|=1U<<bit;
-        if(held_['5'])bits[0]|=1;
-        if(held_['6'])bits[1]|=1;
-        if(held_['7'])bits[2]|=1;
-        if(held_['Z'] || held_['1'] || held_[0x0d] || held_[mouse_primary])bits[0]|=2;
-        if(held_['X'] || held_[mouse_secondary])bits[0]|=4;
-        if(held_['2'])bits[1]|=2; // Retain the existing debugging/join shortcut.
-        if(held_[0x28])bits[0]|=0x10;
-        if(held_[0x26])bits[0]|=0x20;
-        if(held_[0x27])bits[0]|=0x40;
-        if(held_[0x25])bits[0]|=0x80;
+        if(held_['F'])bits[0]|=1;
+        if(held_['Q'] || held_[0x0d] || held_[mouse_primary])bits[0]|=2;
+        if(held_['E'] || held_[mouse_secondary])bits[0]|=4;
+        if(held_['S'])bits[0]|=0x10;
+        if(held_['W'])bits[0]|=0x20;
+        if(held_['D'])bits[0]|=0x40;
+        if(held_['A'])bits[0]|=0x80;
         constexpr unsigned coins[]{1,2,0x40};
         for(unsigned p=0;p<3;++p){
             // Opposing directions from two devices cancel, rather than feeding

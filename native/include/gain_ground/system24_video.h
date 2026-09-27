@@ -4,7 +4,7 @@
 
 namespace gain_ground {
 class RuntimeHost;
-// Software presentation from live System 24 memory; implemented but unverified.
+// Software presentation from live System 24 memory with steady translucency.
 class System24Video {
 public:
     static constexpr int width = 384, height = 496;

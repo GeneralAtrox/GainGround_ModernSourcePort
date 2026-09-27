@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ZLIB REQUIRED)
 option(GAIN_GROUND_RESEARCH_TESTS "Register tests requiring privately captured ROM data" OFF)
+set(GAIN_GROUND_CHARACTER_SNAPSHOT "" CACHE PATH "Private runtime failure directory for all-character smoke tests")
 
 if(MSVC)
     add_compile_options(/MP /utf-8)
@@ -139,6 +140,10 @@ else()
 endif()
 
 enable_testing()
+add_executable(gain_ground_video_transparency tests/video_transparency.cpp)
+target_link_libraries(gain_ground_video_transparency PRIVATE gain_ground_runtime_host)
+add_test(NAME gain_ground_video_transparency COMMAND gain_ground_video_transparency)
+set_tests_properties(gain_ground_video_transparency PROPERTIES TIMEOUT 10)
 add_executable(gain_ground_title_music tests/title_music.cpp src/system24_audio.cpp)
 target_include_directories(gain_ground_title_music PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(gain_ground_title_music PRIVATE gain_ground_ymfm)
@@ -190,6 +195,23 @@ target_link_libraries(gain_ground_nonlocal_actor_callers PRIVATE gain_ground_run
 add_test(NAME gain_ground_nonlocal_actor_callers COMMAND gain_ground_nonlocal_actor_callers)
 set_tests_properties(gain_ground_nonlocal_actor_callers PROPERTIES LABELS "native-child-boundary" TIMEOUT 30)
 add_executable(gain_ground_runtime_dispatch_repairs tests/runtime_dispatch_repairs.cpp)
+add_executable(gain_ground_character_smoke tests/character_smoke.cpp)
+target_link_libraries(gain_ground_character_smoke PRIVATE gain_ground_runtime_host)
+if(GAIN_GROUND_CHARACTER_SNAPSHOT)
+    foreach(character RANGE 0 19)
+        foreach(mode movement primary secondary)
+            add_test(NAME character_${character}_${mode} COMMAND gain_ground_character_smoke
+                "${GAIN_GROUND_CHARACTER_SNAPSHOT}" ${character} ${mode})
+            set_tests_properties(character_${character}_${mode} PROPERTIES LABELS "character-smoke;native-child-boundary" TIMEOUT 5)
+        endforeach()
+    endforeach()
+    add_test(NAME character_saved_crash COMMAND gain_ground_saved_actor_callback "${GAIN_GROUND_CHARACTER_SNAPSHOT}")
+    set_tests_properties(character_saved_crash PROPERTIES LABELS "character-crash;native-child-boundary" TIMEOUT 5)
+    add_custom_target(check_characters
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error -L character-smoke -j 4
+        DEPENDS gain_ground_character_smoke
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif()
 target_link_libraries(gain_ground_runtime_dispatch_repairs PRIVATE gain_ground_runtime_host)
 add_test(NAME gain_ground_runtime_dispatch_repairs COMMAND gain_ground_runtime_dispatch_repairs)
 set_tests_properties(gain_ground_runtime_dispatch_repairs PROPERTIES LABELS "native-child-boundary" TIMEOUT 30)
@@ -237,7 +259,7 @@ add_custom_target(check_native_child_boundaries
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error
         --label-regex "^native-child-boundary$"
     DEPENDS gain_ground_coin_child_return gain_ground_irq_child_return gain_ground_frame_wait_child_return gain_ground_input_sampler_child_return gain_ground_player_start_input gain_ground_controller_input gain_ground_player_strip_bytes gain_ground_sound_irq_timing gain_ground_scene_child_timing gain_ground_audio_busy_deadline gain_ground_enemy_navigation gain_ground_enemy_navigation_combat gain_ground_enemy_attack_direction
-        gain_ground_nonlocal_actor_callers gain_ground_runtime_dispatch_repairs gain_ground_saved_actor_callback
+        gain_ground_nonlocal_actor_callers gain_ground_runtime_dispatch_repairs gain_ground_saved_actor_callback gain_ground_character_smoke
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     VERBATIM
     USES_TERMINAL)
