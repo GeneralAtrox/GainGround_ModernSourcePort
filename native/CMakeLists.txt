@@ -26,6 +26,8 @@ add_library(gain_ground_contracts STATIC
     src/gameplay/enemy.cpp
     src/translated/cpu_b_state72_default_trap_return.cpp
     src/translated/cpu_b_irq_redirect_wait.cpp
+    src/translated/cpu_b_stage_object_callbacks.cpp
+    src/translated/cpu_b_stage_gap_callbacks.cpp
     src/translated/cpu_b_initials_entry.cpp
     ${GAIN_GROUND_IMPLEMENTATION_SOURCES}
 )
@@ -68,8 +70,8 @@ if(WIN32)
     target_link_libraries(gain_ground_runtime_host PUBLIC bcrypt)
     add_executable(gain_ground_rom_import tests/rom_import_main.cpp)
     target_link_libraries(gain_ground_rom_import PRIVATE gain_ground_runtime_host)
-    add_executable(gain_ground_runtime WIN32 src/runtime_win32.cpp src/runtime_startup_win32.cpp)
-    target_link_libraries(gain_ground_runtime PRIVATE gain_ground_runtime_host user32 gdi32 shell32 bcrypt winmm comdlg32 ole32 uuid)
+    add_executable(gain_ground_runtime WIN32 src/runtime_win32.cpp src/runtime_startup_win32.cpp src/host_sampler_win32.cpp)
+    target_link_libraries(gain_ground_runtime PRIVATE gain_ground_runtime_host user32 gdi32 shell32 bcrypt winmm comdlg32 ole32 uuid psapi dbghelp)
     target_compile_definitions(gain_ground_runtime PRIVATE UNICODE _UNICODE)
     if(MINGW)
         target_link_options(gain_ground_runtime PRIVATE -municode)
@@ -167,6 +169,10 @@ add_executable(gain_ground_enemy_navigation_combat tests/enemy_navigation_combat
 target_link_libraries(gain_ground_enemy_navigation_combat PRIVATE gain_ground_runtime_host)
 add_test(NAME gain_ground_enemy_navigation_combat COMMAND gain_ground_enemy_navigation_combat)
 set_tests_properties(gain_ground_enemy_navigation_combat PROPERTIES LABELS "native-child-boundary" TIMEOUT 30)
+add_executable(gain_ground_stage_select tests/stage_select.cpp)
+target_link_libraries(gain_ground_stage_select PRIVATE gain_ground_runtime_host)
+add_test(NAME gain_ground_stage_select COMMAND gain_ground_stage_select)
+set_tests_properties(gain_ground_stage_select PROPERTIES TIMEOUT 30)
 add_executable(gain_ground_enemy_attack_direction tests/enemy_attack_direction.cpp)
 target_link_libraries(gain_ground_enemy_attack_direction PRIVATE gain_ground_runtime_host)
 if(GAIN_GROUND_RESEARCH_TESTS)
@@ -208,6 +214,12 @@ add_test(NAME gain_ground_coin_child_return COMMAND gain_ground_coin_child_retur
 add_executable(gain_ground_irq_child_return tests/irq_child_return.cpp)
 target_link_libraries(gain_ground_irq_child_return PRIVATE gain_ground_runtime_host)
 add_test(NAME gain_ground_irq_child_return COMMAND gain_ground_irq_child_return)
+add_executable(gain_ground_frame_wait_child_return tests/frame_wait_child_return.cpp)
+target_link_libraries(gain_ground_frame_wait_child_return PRIVATE gain_ground_runtime_host)
+add_test(NAME gain_ground_frame_wait_child_return COMMAND gain_ground_frame_wait_child_return)
+add_executable(gain_ground_input_sampler_child_return tests/input_sampler_child_return.cpp)
+target_link_libraries(gain_ground_input_sampler_child_return PRIVATE gain_ground_runtime_host)
+add_test(NAME gain_ground_input_sampler_child_return COMMAND gain_ground_input_sampler_child_return)
 add_executable(gain_ground_player_start_input tests/player_start_input.cpp)
 add_executable(gain_ground_controller_input tests/controller_input.cpp)
 add_executable(gain_ground_player_strip_bytes tests/player_strip_bytes.cpp)
@@ -217,14 +229,14 @@ target_link_libraries(gain_ground_controller_input PRIVATE gain_ground_runtime_h
 add_test(NAME gain_ground_controller_input COMMAND gain_ground_controller_input)
 target_link_libraries(gain_ground_player_start_input PRIVATE gain_ground_runtime_host)
 add_test(NAME gain_ground_player_start_input COMMAND gain_ground_player_start_input)
-set_tests_properties(gain_ground_coin_child_return gain_ground_irq_child_return gain_ground_player_start_input gain_ground_controller_input gain_ground_player_strip_bytes
+set_tests_properties(gain_ground_coin_child_return gain_ground_irq_child_return gain_ground_frame_wait_child_return gain_ground_input_sampler_child_return gain_ground_player_start_input gain_ground_controller_input gain_ground_player_strip_bytes
     PROPERTIES LABELS "native-child-boundary" TIMEOUT 30)
 # Build and run real-child integration before fixture replay. An empty selection
 # is an error: fixture-only success must never silently replace this gate.
 add_custom_target(check_native_child_boundaries
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error
         --label-regex "^native-child-boundary$"
-    DEPENDS gain_ground_coin_child_return gain_ground_irq_child_return gain_ground_player_start_input gain_ground_controller_input gain_ground_player_strip_bytes gain_ground_sound_irq_timing gain_ground_scene_child_timing gain_ground_audio_busy_deadline gain_ground_enemy_navigation gain_ground_enemy_navigation_combat gain_ground_enemy_attack_direction
+    DEPENDS gain_ground_coin_child_return gain_ground_irq_child_return gain_ground_frame_wait_child_return gain_ground_input_sampler_child_return gain_ground_player_start_input gain_ground_controller_input gain_ground_player_strip_bytes gain_ground_sound_irq_timing gain_ground_scene_child_timing gain_ground_audio_busy_deadline gain_ground_enemy_navigation gain_ground_enemy_navigation_combat gain_ground_enemy_attack_direction
         gain_ground_nonlocal_actor_callers gain_ground_runtime_dispatch_repairs gain_ground_saved_actor_callback
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     VERBATIM
@@ -294,6 +306,18 @@ add_test(
         ${CMAKE_CURRENT_SOURCE_DIR}/../fixtures/corpus-expanded-v1/gground-function-fixtures.ggfz
         --all-implemented
 )
+add_executable(gain_ground_fixture_enclosing_wait tests/fixture_enclosing_wait.cpp)
+target_link_libraries(gain_ground_fixture_enclosing_wait PRIVATE gain_ground_contracts)
+add_test(NAME gain_ground_fixture_enclosing_wait
+    COMMAND gain_ground_fixture_enclosing_wait
+        ${CMAKE_CURRENT_SOURCE_DIR}/../fixtures/corpus-expanded-v1/gground-function-fixtures.ggfz)
+set_tests_properties(gain_ground_fixture_enclosing_wait PROPERTIES TIMEOUT 30)
+add_executable(gain_ground_fixture_input_partition tests/fixture_input_partition.cpp)
+target_link_libraries(gain_ground_fixture_input_partition PRIVATE gain_ground_contracts)
+add_test(NAME gain_ground_fixture_input_partition
+    COMMAND gain_ground_fixture_input_partition
+        ${CMAKE_CURRENT_SOURCE_DIR}/../fixtures/corpus-expanded-v1/gground-function-fixtures.ggfz)
+set_tests_properties(gain_ground_fixture_input_partition PROPERTIES TIMEOUT 30)
 endif()
 add_test(
     NAME gain_ground_function34_carry_path

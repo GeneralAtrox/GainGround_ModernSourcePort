@@ -1,12 +1,19 @@
 #pragma once
 #include "gground_functions.h"
 #include "gain_ground/stage_function_registry.h"
+#include "gain_ground/stage_gap_registry.h"
 #include <array>
 #include <cstddef>
 
 namespace gain_ground::translated {
 FunctionResult cpu_b_state72_default_trap_return(FunctionContext &) noexcept;
 FunctionResult cpu_b_irq_redirect_wait(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_object_spawner_a(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_object_spawner_a_tail(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_object_spawner_b(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_object_spawner_b_tail(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_object_cycle_four_frames(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_object_cycle_seven_frames(FunctionContext &) noexcept;
 }
 
 namespace gain_ground::native_registry {
@@ -99,8 +106,39 @@ inline constexpr FunctionContract kPendingDriveErrorEntry = [] {
     return entry;
 }();
 
+// Stage slot lists install these record callbacks (13EF2..14015) for timed
+// spawners and animated scenery; no captured run reached them. Translated from
+// the retained state-72 opcode bank, including the two tail entries the
+// spawners install as their own later callback. Not fixture evidence.
+inline constexpr auto kPendingStageObjectCallbacks = [] {
+    struct Entry { std::uint32_t id, address, body_max; std::string_view label; FunctionEntry entry; };
+    constexpr std::array<Entry, 6> entries{{
+        {643U, 0x13ef2U, 0x13f6dU, "cpu_b_stage_object_spawner_a", &translated::cpu_b_stage_object_spawner_a},
+        {644U, 0x13f66U, 0x13f6dU, "cpu_b_stage_object_spawner_a_tail", &translated::cpu_b_stage_object_spawner_a_tail},
+        {645U, 0x13f6eU, 0x13fbfU, "cpu_b_stage_object_spawner_b", &translated::cpu_b_stage_object_spawner_b},
+        {646U, 0x13fb8U, 0x13fbfU, "cpu_b_stage_object_spawner_b_tail", &translated::cpu_b_stage_object_spawner_b_tail},
+        {647U, 0x13fc0U, 0x13fe7U, "cpu_b_stage_object_cycle_four_frames", &translated::cpu_b_stage_object_cycle_four_frames},
+        {648U, 0x13fe8U, 0x14015U, "cpu_b_stage_object_cycle_seven_frames", &translated::cpu_b_stage_object_cycle_seven_frames},
+    }};
+    std::array<FunctionContract, 6> contracts{};
+    for (std::size_t i = 0U; i < entries.size(); ++i) {
+        const auto &e = entries[i];
+        contracts[i] = FunctionContract{e.id, 1U, 0x72U, false, true, e.address, e.address, e.body_max,
+            e.body_max + 1U - e.address, 0U, 0U, "cpu-b", "72", "unverified", "retained-opcode-source",
+            "implementation-first", "implemented-but-unverified", e.label,
+            "native/src/translated/cpu_b_stage_object_callbacks.cpp", e.entry};
+    }
+    return contracts;
+}();
+static_assert(kPendingStageObjectCallbacks[0].id >= generated::kFunctions.size(),
+    "Migrate the stage object callbacks when extending the generated inventory");
+
 inline const FunctionContract *find(std::uint8_t cpu, std::uint8_t state,
                                     std::uint32_t address) noexcept {
+    for (const auto &callback : kPendingStageObjectCallbacks)
+        if (callback.cpu == cpu && callback.state == state && callback.address == address)
+            return &callback;
+    if (const auto *gap = stage_gap_registry::find(cpu, state, address)) return gap;
     if (kPendingDriveErrorEntry.cpu == cpu && kPendingDriveErrorEntry.state == state && kPendingDriveErrorEntry.address == address)
         return &kPendingDriveErrorEntry;
     const auto &stage_dispatch = kPendingCharacterStageDispatch;

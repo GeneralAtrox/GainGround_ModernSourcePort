@@ -147,6 +147,9 @@ NavigationPoint EnemyNavigation::steer(NavigationState &state,const NavigationWo
     const bool clear_goal=terrain_clear(world,body.position,goal);
     const bool clear_step=free_step(world,body,scale(unit(sub(goal,body.position)),std::min(goal_distance,std::max(6.0,speed*12))));
     state.blocked_updates=clear_step ? 0:state.blocked_updates+1;
+    // Once a detour displaces the actor from its original straight leg, keep
+    // steering at the waypoint: the original heading is fixed per leg and
+    // would otherwise miss the arrival window entirely.
     if(!clear_goal || !clear_step || !free_step(world,body,scale(unit(intended),std::max(6.0,speed*12))))state.navigating=true;
     while(!state.route.empty() && length(sub(state.route.front(),body.position))<=std::max(0.25,speed))state.route.erase(state.route.begin());
     const auto progress=state.route.empty() ? goal:state.route.front();

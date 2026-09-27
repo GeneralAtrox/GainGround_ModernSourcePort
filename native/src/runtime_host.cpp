@@ -1,4 +1,7 @@
 #include "gain_ground/runtime_host.h"
+#include <cstdio>
+#include <cstdlib>
+#include <optional>
 #include "gain_ground/direct_asset_loader.h"
 #include "gain_ground/system24_devices.h"
 #include "gain_ground/native_function_registry.h"
@@ -84,7 +87,23 @@ bool with_original_character(RuntimeHost &host, FunctionContext &context,
 bool RuntimeHost::run_character_update(FunctionContext &context, FunctionResult &result)
 {
     if (!gameplay::is_character_update_entry(context.registers.program_counter)) return false;
+    // Remember which record each player character occupies (player index at +6D).
+    const auto record = context.registers.address[5];
+    const auto bytes = region_bytes(2U);
+    if (record + 0x6dU < bytes.size()) player_records_[bytes[record + 0x6dU] & 3U] = record;
     return with_original_character(*this, context, result, gameplay::run_character_update);
+}
+
+bool RuntimeHost::teleport_player(unsigned player, int x, int y)
+{
+    const auto record = player_record(player);
+    if (record == 0U || regions_[2].bytes.size() <= record + 0x1dU || !(regions_[2].bytes[record] & 0x80U)) return false;
+    const auto fx = static_cast<std::uint32_t>(x) << 16U, fy = static_cast<std::uint32_t>(y) << 16U;
+    write_memory_word(2U, record + 0x12U, static_cast<std::uint16_t>(fx >> 16U), 0xffffU);
+    write_memory_word(2U, record + 0x14U, static_cast<std::uint16_t>(fx), 0xffffU);
+    write_memory_word(2U, record + 0x1aU, static_cast<std::uint16_t>(fy >> 16U), 0xffffU);
+    write_memory_word(2U, record + 0x1cU, static_cast<std::uint16_t>(fy), 0xffffU);
+    return true;
 }
 
 bool RuntimeHost::run_character_attacks(FunctionContext &context, FunctionResult &result)
@@ -333,8 +352,25 @@ void RuntimeHost::wait_until_time(std::uint64_t deadline_ns)
     cpu_deadlines_[cpu] = deadline_ns;
     const auto previous_waiting = waiting_;
     waiting_ = true;
-    while (!faulted() && devices_->time_ns() < deadline_ns)
+    const auto other = 1U - cpu;
+    while (!faulted() && devices_->time_ns() < deadline_ns) {
+        // When the other CPU cannot run before this deadline, the scheduler
+        // would only step the device clock to the next device event or this
+        // deadline and switch straight back. Take exactly that step here and
+        // save the fiber round trip; the device sees the same sequence of
+        // advances. Otherwise yield so the other CPU runs in its turn.
+        // A CPU without a deadline is runnable, not idle: the scheduler would
+        // switch to it before stepping time. Only a later deadline, or CPU B
+        // still disabled, leaves this CPU alone until its own deadline.
+        const auto other_deadline = cpu_deadlines_[other];
+        const bool other_idle = (other == 1U && !devices_->cpu_b_enabled()) ||
+                                (other_deadline != UINT64_MAX && other_deadline > deadline_ns);
+        if (other_idle && direct_wait_) {
+            const auto step = std::min(devices_->next_event_ns(), deadline_ns);
+            if (step > devices_->time_ns()) { devices_->advance(step); operations_since_switch_ = 0U; continue; }
+        }
         checkpoint_(checkpoint_argument_);
+    }
     waiting_ = previous_waiting;
     cpu_deadlines_[cpu] = previous_deadline;
 }
@@ -355,6 +391,7 @@ std::uint64_t RuntimeHost::next_cpu_deadline_ns() const noexcept
 void RuntimeHost::checkpoint()
 {
     ++operations_;
+    ++operations_since_switch_;
     if (checkpoint_) checkpoint_(checkpoint_argument_);
 }
 
@@ -412,6 +449,37 @@ void RuntimeHost::write_memory_word(std::uint16_t id, std::uint32_t offset,
     auto *r = region_at(id, offset);
     if (!r || faulted()) return;
     if (r->read_only) { fail("Native write to ROM", offset, id, mask); return; }
+    const bool cpu_b_write = selected_cpu_ == 1U && active_ && active_->cpu == 1U && mask == 0xffffU;
+    const auto pc = active_ ? active_->registers.program_counter : 0U;
+    if (cpu_b_write && (start_stage_ >= 0 || start_stage_publish_)) {
+        const auto redirected = stage_select_write(id, offset, value, pc);
+        if (redirected != value) {
+            value = redirected;
+            if (id == 3U) active_->registers.data[0] = (active_->registers.data[0] & 0xffff0000U) | value;
+        }
+    }
+    const bool stage_handshake = cpu_b_write && id == 3U && offset == 0x38006U &&
+        (pc == 0xd390U || pc == 0xd888U || pc == 0xd896U) && regions_[2].bytes.size() > 0x840U;
+    // Opt-in diagnostics share the navigation log: GAIN_GROUND_NAV_LOG=<path>.
+    static std::FILE *log = [] { const char *p = std::getenv("GAIN_GROUND_NAV_LOG"); return p && *p ? std::fopen(p, "a") : nullptr; }();
+    if (log && devices_ && ((id == 2U && (offset == 0xc02U || offset == 0xc04U || offset == 0xc06U || offset == 0xc14U || offset == 0xc16U || offset == 0x820U || offset == 0x834U || offset == 0x836U)) ||
+                            (id == 3U && (offset == 0x38002U || offset == 0x38006U)))) {
+        const auto before = (static_cast<std::uint16_t>(r->bytes[offset]) << 8U) | r->bytes[offset + 1U];
+        const auto after = static_cast<std::uint16_t>((before & ~mask) | (value & mask));
+        if (after != before)
+            std::fprintf(log, "write frame %llu cpu %u pc %06x region %u offset %05x %04x -> %04x\n",
+                static_cast<unsigned long long>(devices_->frame()), active_ ? unsigned(active_->cpu) : 9U,
+                active_ ? unsigned(active_->registers.program_counter) : 0U, unsigned(id), unsigned(offset), unsigned(before), unsigned(after));
+        std::fflush(log);
+    }
+    if (stage_handshake) {
+        if (log) {
+            const auto &b = regions_[2].bytes;
+            std::fprintf(log, "stage-start selector %u c02 %02x%02x c04 %02x c05 %02x c06 %02x c07 %02x 820 %02x 821 %02x 834 %02x%02x 836 %02x pending %d\n",
+                unsigned(value), b[0xc02], b[0xc03], b[0xc04], b[0xc05], b[0xc06], b[0xc07], b[0x820], b[0x821], b[0x834], b[0x835], b[0x836], start_stage_);
+            std::fflush(log);
+        }
+    }
     const auto before = (static_cast<std::uint16_t>(r->bytes[offset]) << 8U)
         | r->bytes[offset + 1U];
     const auto after = static_cast<std::uint16_t>((before & ~mask) | (value & mask));
@@ -419,6 +487,54 @@ void RuntimeHost::write_memory_word(std::uint16_t id, std::uint32_t offset,
     r->bytes[offset + 1U] = static_cast<std::uint8_t>(after);
     r->known_bits[offset] |= static_cast<std::uint8_t>(mask >> 8U);
     r->known_bits[offset + 1U] |= static_cast<std::uint8_t>(mask);
+}
+
+// Stage select. The original stage-clear routine advances the index at
+// 0xd862, then publishes it to CPU A: a round's first stage takes the
+// new-round branch (bank request at $8002, selector at $8006 from 0xd888),
+// any other stage the same-round branch (0xd896, no bank request). A chosen
+// stage may lie in another round, so route the clear through the new-round
+// branch: land on that round's first stage at 0xd862, with the bank one below
+// so the original increment reaches it, then publish the chosen stage itself
+// at 0xd888. Boot and the attract demo publish from other paths.
+std::uint16_t RuntimeHost::stage_select_write(std::uint16_t region, std::uint32_t offset,
+                                              std::uint16_t value, std::uint32_t pc)
+{
+    if (start_stage_ >= 0 && region == 2U && offset == 0xc02U && pc == 0xd862U) {
+        const auto round = static_cast<std::uint16_t>(start_stage_ / 10);
+        write_memory_word(2U, 0xc00U, static_cast<std::uint16_t>(round - 1U), 0xffffU);
+        start_stage_publish_ = true;
+        return static_cast<std::uint16_t>(round * 10U);
+    }
+    if (start_stage_publish_ && region == 3U && offset == 0x38006U && pc == 0xd888U) {
+        const auto stage = static_cast<std::uint16_t>(start_stage_);
+        start_stage_ = -1;
+        start_stage_publish_ = false;
+        start_stage_applied_ = true;
+        write_memory_word(2U, 0xc02U, stage, 0xffffU);
+        return static_cast<std::uint16_t>(stage + 1U);
+    }
+    if (start_stage_publish_ && region == 3U && offset == 0x38006U && pc == 0xd896U)
+        start_stage_publish_ = false; // Not reachable after the redirect; never leave it armed.
+    return value;
+}
+
+// The stage phase machine (0xd734) runs each frame of a stage. In its play
+// phase it clears the stage itself once the remaining-enemy count at 0xc14
+// reaches zero while players are on the field (0xc10) and none is dying
+// (0xc06). That is the clear that carries every player into the next stage's
+// roster; writing the clear phase directly instead behaves like the time-up
+// clear, which loses the players still on the field. So a menu request zeroes
+// the enemy count and lets the original trigger run, during play only: the
+// attract demo marks its players in 0xc06. A clear already under way simply
+// carries the pending stage.
+bool RuntimeHost::stage_select_frame(std::uint32_t)
+{
+    const auto &b = regions_[2].bytes;
+    if (!start_stage_force_ || b.size() <= 0xc17U || b[0xc06U] != 0U) return false;
+    start_stage_force_ = false;
+    if (b[0xc16U] == 0U && b[0xc17U] == 0U) write_memory_word(2U, 0xc14U, 0U, 0xffffU);
+    return true;
 }
 
 std::uint16_t RuntimeHost::read_hardware(std::uint8_t kind, std::uint8_t cpu, std::uint8_t,
@@ -534,6 +650,16 @@ FunctionContext RuntimeHost::cpu_a_reset_context()
 FunctionResult RuntimeHost::execute(const FunctionContract &first, FunctionContext &c, std::uint32_t callsite)
 {
     if (depth_ >= 512U) {
+        // Opt-in diagnostics: the innermost frames of the runaway chain.
+        static std::FILE *log = [] { const char *p = std::getenv("GAIN_GROUND_NAV_LOG"); return p && *p ? std::fopen(p, "a") : nullptr; }();
+        if (log) {
+            std::fprintf(log, "call depth exceeded entering %06x (function %u); innermost frames:", unsigned(first.address), unsigned(first.id));
+            unsigned shown = 0U;
+            for (const auto *frame = invocation_; frame && shown < 24U; frame = frame->parent, ++shown)
+                std::fprintf(log, " %u@%06x", unsigned(frame->function_id), unsigned(frame->callsite));
+            std::fputc('\n', log);
+            std::fflush(log);
+        }
         fail("Native call depth exceeds runtime capacity");
         return {TranslationStatus::contract_violation, 0U, c.registers.program_counter};
     }
@@ -571,6 +697,9 @@ FunctionResult RuntimeHost::execute(const FunctionContract &first, FunctionConte
         frame.cpu = c.cpu;
         frame.function_id = f->id;
         frame.actor = c.registers.address[5];
+        if (start_stage_force_ && f->id == 153U && c.cpu == 1U && c.state == 0x72U &&
+            c.registers.program_counter == 0xd734U)
+            (void)stage_select_frame(c.registers.address[5]);
         if (f->id == 140U && c.cpu == 1U && c.state == 0x72U && c.registers.program_counter == 0xa618U)
             enemy_navigation_.reset();
         if (f->id == 140U && c.cpu == 1U && c.state == 0x72U &&
@@ -710,7 +839,44 @@ FunctionResult RuntimeHost::call_function(std::uint32_t id, std::uint8_t cpu,
     // the original title voices. The accepted cue's own key-ons release them.
     const bool coin_request = devices_ && cpu == 0U && state == 0xffU &&
         id == 85U && site == 0x83d1aU && (c.registers.data[2] & 0xffffU) == 0x36U;
-    const auto child = execute(*f, c, site);
+    const auto stack_before = c.registers.address[7];
+    const auto caller_id = invocation_ ? invocation_->function_id : 0U;
+    // CPU B stack words as the caller left them: [a7] is the caller's own
+    // continuation (just pushed), [a7+4] is the caller's return address.
+    const auto stack_long = [&](std::uint32_t a) -> std::optional<std::uint32_t> {
+        const auto &b = regions_[2].bytes;
+        if (cpu != 1U || a + 8U > b.size()) return std::nullopt;
+        return (std::uint32_t(b[a]) << 24U) | (std::uint32_t(b[a + 1U]) << 16U) | (std::uint32_t(b[a + 2U]) << 8U) | b[a + 3U];
+    };
+    const auto caller_next = stack_long(stack_before);
+    const auto caller_return = stack_long(stack_before + 4U);
+    auto child = execute(*f, c, site);
+    // Nonlocal returns. Some originals drop their caller's frame and return
+    // to the caller's caller. Hand translations report that as control 8;
+    // a literal translation reports control 1 with the stack popped twice.
+    // Normalise both here so every caller, generated or hand-written, sees a
+    // control-8 result pass through it, and the frame whose continuation the
+    // return lands on sees an ordinary return.
+    if (cpu == 1U && child.status == TranslationStatus::complete) {
+        const auto pc = c.registers.program_counter;
+        if (child.control == 1U && caller_return && c.registers.address[7] == stack_before + 8U && pc == *caller_return)
+            child = FunctionResult::complete(8U, pc);
+        else if (child.control == 8U && caller_next && pc == *caller_next)
+            child = FunctionResult::complete(1U, pc);
+    }
+    // Opt-in diagnostics (GAIN_GROUND_NAV_LOG): every child result that is not a
+    // plain return to its caller, with the stack movement it left behind.
+    if (devices_ && (child.status != TranslationStatus::complete || child.control != 1U ||
+                     c.registers.address[7] != stack_before + 4U)) {
+        static std::FILE *log = [] { const char *p = std::getenv("GAIN_GROUND_NAV_LOG"); return p && *p ? std::fopen(p, "a") : nullptr; }();
+        if (log) {
+            std::fprintf(log, "call frame %llu caller %u site %06x callee %u target %06x -> status %u control %u exit %06x a7 %05x -> %05x\n",
+                static_cast<unsigned long long>(devices_->frame()), unsigned(caller_id), unsigned(site), unsigned(id), unsigned(target),
+                unsigned(child.status), unsigned(child.control), unsigned(child.exit_program_counter),
+                unsigned(stack_before), unsigned(c.registers.address[7]));
+            std::fflush(log);
+        }
+    }
     if (coin_request && child.status == TranslationStatus::complete && child.control == 1U)
         devices_->audio.notify_coin_credit_accepted();
     if (child.status == TranslationStatus::complete && child.control == 2U &&

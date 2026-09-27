@@ -174,11 +174,15 @@ FunctionResult cpu_b_find_record_in_bounds_by_type(
             put_word(r, 0U, table_offset);
             asl_two_flags(r, selector, table_offset);
 
+            // 239B0 holds twelve BRA.W entries: types 1, 4, 8, 9, 10 and 11
+            // take the bounds test at 239E0; the others skip the record.
             switch (table_offset) {
             case 4U:
             case 16U:
             case 32U:
             case 36U:
+            case 40U:
+            case 44U:
                 reject = false;
                 break;
             case 0U:

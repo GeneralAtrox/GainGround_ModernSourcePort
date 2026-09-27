@@ -236,6 +236,72 @@ int main(){try{
         if(std::hypot(fixed(0x3512)-200,fixed(0x351a)-100)>=9)std::cerr<<"rock actor at "<<fixed(0x3512)<<','<<fixed(0x351a)<<'\n';
         check(std::hypot(fixed(0x3512)-200,fixed(0x351a)-100)<9,"NPC remained stuck at solid scenery");
     }
+    { // Entering from off screen or outside the movement rectangle keeps original intent.
+        for(auto [x,y,dx,dy]:{std::array<int,4>{-40,100,1,0},{200,530,0,-1},{420,300,-1,0},{100,-30,0,1},{30,300,1,0}}){
+            std::vector<std::uint8_t> ram(0x40000),shared(0x40000);actor(ram,0x3500,x,y);
+            ram[0x32dec]=static_cast<std::uint8_t>(x==30 ? 8:0);ram[0x32ded]=48;ram[0x32def]=62;
+            put(ram,0x3562,200,2);put(ram,0x3564,250,2);
+            const auto fixed=[&](unsigned a){std::uint32_t n=0;for(unsigned i=0;i<4;++i)n=(n<<8)|ram[a+i];return static_cast<std::int32_t>(n)/65536.0;};
+            LegacyEnemyNavigation adapter;bool entered=false;
+            const int left=x==30 ? 64:0;
+            for(unsigned frame=1;frame<=120 && !entered;++frame){
+                put(ram,0x351e,static_cast<std::uint32_t>(dx*65536),4);put(ram,0x3526,static_cast<std::uint32_t>(dy*65536),4);
+                adapter.prepare(ram,shared,0x3500,frame);
+                const auto sx=fixed(0x351e),sy=fixed(0x3526);
+                check(std::hypot(sx,sy)>0.99,"Off-screen entry intent was erased");
+                const auto nx=fixed(0x3512)+sx,ny=fixed(0x351a)+sy;
+                put(ram,0x3512,static_cast<std::uint32_t>(static_cast<std::int32_t>(nx*65536)),4);
+                put(ram,0x351a,static_cast<std::uint32_t>(static_cast<std::int32_t>(ny*65536)),4);
+                adapter.finish_move(ram,0x3500,frame);
+                const int fx=int(std::floor(nx)),fy=int(std::floor(ny));
+                entered=fx-10>=left && fx>=10 && fx<=363 && fy>=9 && fy<=477;
+            }
+            if(!entered)std::cerr<<"entry actor from "<<x<<','<<y<<" at "<<fixed(0x3512)<<','<<fixed(0x351a)<<'\n';
+            check(entered,"Off-screen enemy never entered the level");
+        }
+    }
+    { // A scripted route point at the screen edge is reached by the original step, not waited for.
+        for(auto [gx,gy,dx,dy]:{std::array<int,4>{200,490,0,1},{378,300,1,0},{200,3,0,-1},{4,300,-1,0}}){
+            std::vector<std::uint8_t> ram(0x40000),shared(0x40000);actor(ram,0x3500,200,300);
+            ram[0x32ded]=48;ram[0x32def]=62;put(ram,0x3562,static_cast<unsigned>(gx)&0xffff,2);put(ram,0x3564,static_cast<unsigned>(gy)&0xffff,2);
+            const auto fixed=[&](unsigned a){std::uint32_t n=0;for(unsigned i=0;i<4;++i)n=(n<<8)|ram[a+i];return static_cast<std::int32_t>(n)/65536.0;};
+            LegacyEnemyNavigation adapter;bool arrived=false;
+            for(unsigned frame=1;frame<=400 && !arrived;++frame){
+                put(ram,0x351e,static_cast<std::uint32_t>(dx*65536),4);put(ram,0x3526,static_cast<std::uint32_t>(dy*65536),4);
+                adapter.prepare(ram,shared,0x3500,frame);
+                const auto sx=fixed(0x351e),sy=fixed(0x3526);
+                check(std::hypot(sx,sy)>0.99,"Edge route point put the runner into a boundary wait");
+                const auto nx=fixed(0x3512)+sx,ny=fixed(0x351a)+sy;
+                put(ram,0x3512,static_cast<std::uint32_t>(static_cast<std::int32_t>(nx*65536)),4);
+                put(ram,0x351a,static_cast<std::uint32_t>(static_cast<std::int32_t>(ny*65536)),4);
+                adapter.finish_move(ram,0x3500,frame);
+                arrived=std::abs(nx-gx)<=10 && std::abs(ny-gy)<=10;
+            }
+            check(arrived,"Runner never reached its edge route point");
+        }
+    }
+    { // Through the real gates: a descriptor rectangle reaching off screen admits the walk in.
+        gain_ground::RuntimeHost host;gain_ground::System24Devices devices;host.attach_devices(devices);host.select_cpu(1);
+        std::vector<std::uint8_t> ram(0x40000),shared(0x40000);actor(ram,0x3500,-40,100);
+        ram[0x32dec]=0xf0;ram[0x32ded]=64;ram[0x32dee]=0xf8;ram[0x32def]=80;put(ram,0x3564,100,2);
+        put(ram,0x6c00,0x8000,2);put(ram,0x7ff0,0x20934,4);
+        host.load_region(2,0,ram);host.load_region(3,0,shared);
+        gain_ground::FunctionContext c{};c.host=&host;c.cpu=1;c.state=0x72;c.registers.address[5]=0x3500;c.registers.status=0x2700;
+        const auto fixed=[&](unsigned a){const auto r=host.region_bytes(2);std::uint32_t n=0;for(unsigned i=0;i<4;++i)n=(n<<8)|r[a+i];return static_cast<std::int32_t>(n)/65536.0;};
+        for(unsigned frame=1;frame<=120;++frame){
+            devices.advance(frame*17500000ULL);
+            host.write_memory_word(2,0x351e,1,0xffff);host.write_memory_word(2,0x3520,0,0xffff);
+            host.write_memory_word(2,0x3526,0,0xffff);host.write_memory_word(2,0x3528,0,0xffff);
+            for(auto [id,pc]:{std::pair{353U,0x1dbf0U},std::pair{355U,0x1de30U},std::pair{357U,0x1e124U}}){
+                c.registers.address[7]=0x7ff0;c.registers.program_counter=pc;
+                auto result=host.call_function(id,1,0x72,2,0x20930,pc,c);
+                check(!host.faulted() && result.control==1,"Off-screen entry dispatch failed");
+            }
+            check(!(host.region_bytes(2)[0x3540]&2),"Off-screen entry was stopped by the movement gate");
+        }
+        if(fixed(0x3512)<70)std::cerr<<"entry actor at "<<fixed(0x3512)<<','<<fixed(0x351a)<<'\n';
+        check(fixed(0x3512)>=70,"Off-screen enemy did not walk onto the field through the original gates");
+    }
     {World w;w.walls={{110,150,20,170}};w.actors={{1,{70,100}}};const NavigationPoint goals[]{{200,100}};simulate(w,goals,650);}
     {World w;w.actors={{1,{80,100}},{2,{180,100}}};const NavigationPoint goals[]{{220,100},{40,100}};simulate(w,goals,600);}
     {World w;w.walls={{80,150,0,80},{80,150,120,496}};w.actors={{1,{60,100}},{2,{170,100}}};const NavigationPoint goals[]{{220,100},{30,100}};simulate(w,goals,1000);}

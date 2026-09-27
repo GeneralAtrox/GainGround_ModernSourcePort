@@ -925,6 +925,12 @@ public:
                     && callsite == 0x00016134U && target == 0x00016138U)
                 || (function_id == 589U
                     && callsite == 0x00016140U && target == 0x00016142U));
+        // Original F116 retains the fourth input sample and its outer RTS.
+        // Standalone F119 stops before this same sequential owner boundary.
+        const bool execute_enclosing_f116_input_partition = kind == 0U
+            && fixture_.function_id == 116U && function_id == 120U
+            && target_cpu == 1U && target_state == 0x72U
+            && callsite == 0x000085ceU && target == 0x000085d0U;
         const bool execute_enclosing_f628_wait_partition = kind == 0U
             && fixture_.function_id == 628U
             && function_id == 118U
@@ -951,6 +957,7 @@ public:
                 && !execute_enclosing_f548_partition
                 && !execute_function526_current_partition
                 && !execute_enclosing_f54_palette_partition
+                && !execute_enclosing_f116_input_partition
                 && !execute_enclosing_f628_wait_partition)
                 || kind == 6U || self_loop_continuation
                 || tail_transfer_boundary || asynchronous_transfer_boundary) {
@@ -1000,7 +1007,12 @@ public:
         if (fixture_.control == 4U && fixture_.exit_pc == target
                 && call_index_ == fixture_.calls.size())
             return true;
-        const bool enclosing_f628_wait_marker = fixture_.function_id == 628U
+        // F115/F116 captures retain thousands of BPL backedges inside F118,
+        // then end at an interrupt. Consume each exact marker in this loop:
+        // recursively calling F118 exhausts the stack and turns the eventual
+        // interrupt result into a self-continuation boundary on unwind.
+        const bool enclosing_f118_wait_marker = (fixture_.function_id == 115U
+                || fixture_.function_id == 116U || fixture_.function_id == 628U)
             && function_id == 118U
             && target_cpu == 1U && target_state == 0x72U
             && kind == 1U
@@ -1011,7 +1023,7 @@ public:
         const bool enclosing_f55_wait_marker = fixture_.function_id == 55U
             && function_id == 61U && target_cpu == 0U && target_state == 0xffU
             && kind == 1U && callsite == 0x0008034eU && target == 0x0008034aU;
-        const bool enclosing_wait_marker = enclosing_f628_wait_marker || enclosing_f55_wait_marker;
+        const bool enclosing_wait_marker = enclosing_f118_wait_marker || enclosing_f55_wait_marker;
         if (call_index_ >= fixture_.calls.size()) {
             if (enclosing_wait_marker)
                 set_divergence("call", "count", "captured continuation marker",
