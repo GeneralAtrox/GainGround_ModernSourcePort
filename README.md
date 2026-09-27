@@ -14,6 +14,11 @@ Removing game data is not legal clearance of the translated code. See
 
 ## Build
 
+For a ready-to-run Windows x64 build, download the ZIP from
+[GitHub Releases](https://github.com/GeneralAtrox/GainGround_ModernSourcePort/releases/latest).
+Extract the whole folder and run `gain_ground_runtime.exe`, keeping the included
+DLLs beside it. Supply your own supported ROM set on first launch.
+
 Requirements: Windows, CMake 3.24+, Ninja, a C++20 compiler and zlib development
 files. With the MSYS2 UCRT64 toolchain installed at `C:\msys64\ucrt64`:
 
@@ -28,8 +33,8 @@ ctest --test-dir build --output-on-failure
 
 Committed C++ files suffice to build; private research generators are not build
 prerequisites. For a portable local build, keep the compiler runtime DLLs and
-`zlib1.dll` beside the executable, and retain the third-party notices. No binary
-release is bundled here.
+`zlib1.dll` beside the executable, and retain the third-party notices. Binary
+downloads are published as release assets rather than committed to the source tree.
 
 ## First run
 

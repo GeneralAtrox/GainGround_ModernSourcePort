@@ -110,3 +110,29 @@ The later F498 capture build and its temporary test-output log also remain local
 automatic approval review rejected their respective guarded cleanup actions as
 "blocked by policy". No alternate deletion or parent-directory removal was
 attempted. Conclusions are retained in the fixture investigation and manifests.
+# Windows binary release — 2026-09-27
+
+Published [Windows x64 build](https://github.com/GeneralAtrox/GainGround_ModernSourcePort/releases/tag/build-2026-09-27)
+from source commit `59f105cfffc6abba6073355cf3966c03dbc9dd8e`.
+A clean `git archive` export completed all 686 steps for the Release
+`gain_ground_runtime` target with GNU C++ 16.2.0 and private research tests off.
+No new gameplay or full-parity tests were run for this upload.
+
+The 4,475,279-byte ZIP contains the EXE, four required runtime DLLs, startup
+instructions, third-party notices, and a build manifest recording file hashes
+and imports. Recursive inspection found no missing non-system DLL import.
+Every archived file matches its packaged input and the ZIP integrity check
+passes. No ROMs, extracted assets, local game data, or research captures are
+included. GitHub reports the asset uploaded and its SHA-256 matches locally:
+
+- ZIP: `9cbdce96157a5eb2bb2df87b240cee33abec41597a3375be368785ed6d0d40b1`
+- EXE: `ca5c52dc486eb470d33ff70fa47c285bbc651bc25b98e942d96207385d6e017d`
+
+The user-requested release package and manifest are retained under
+`run/releases/windows-2026-09-27-59f105c/`. This publication does not promote
+the open original-behavior acceptance gates.
+
+Automatic approval review rejected the guarded cleanup of
+`.tmp/github-release-20260927-59f105c` as "blocked by policy". The temporary
+source export and build remain local and excluded from Git. No alternate
+deletion or retry was attempted.
