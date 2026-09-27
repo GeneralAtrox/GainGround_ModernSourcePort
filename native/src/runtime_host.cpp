@@ -438,7 +438,10 @@ std::uint16_t RuntimeHost::read_memory_word(std::uint16_t id, std::uint32_t offs
         fail("Read requires uninitialized memory; no captured value substituted", offset, id, mask);
         return 0U;
     }
-    const auto original = static_cast<std::uint16_t>((r->bytes[offset] << 8U) | r->bytes[offset + 1U]);
+    auto original = static_cast<std::uint16_t>((r->bytes[offset] << 8U) | r->bytes[offset + 1U]);
+    // The player start/continue paths OR byte $404 into credit eligibility.
+    // Overlay its high bit for the user option; preserve stored settings.
+    if (unlimited_credits_ && id == 2U && offset == 0x404U) original |= 0x8000U;
     return static_cast<std::uint16_t>(definition_read_word(id, offset, original) & mask);
 }
 

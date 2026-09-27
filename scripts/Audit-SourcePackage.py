@@ -6,7 +6,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 EXACT = {
-    ".gitignore", ".gitattributes", "README.md", "NOTICE.md",
+    ".gitignore", ".gitattributes", "README.md", "NOTICE.md", "launch.bat",
     "native/README.md", "native/CMakeLists.txt", "docs/source-release.md",
     "scripts/Audit-SourcePackage.py", "scripts/Build-Source.ps1", "scripts/Test-RomImport.py",
     "docs/acceptance-baseline-20260926.md",

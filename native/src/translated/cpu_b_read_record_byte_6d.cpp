@@ -85,12 +85,15 @@ FunctionResult cpu_b_read_record_byte_6d(FunctionContext &context) noexcept
     host.write_memory_word(kPrivateRegion, 0x7b30U,
         static_cast<std::uint16_t>(phase + 1U), kWordMask);
 
-    const auto active = read_byte(host, registers.address[6]);
-    write_byte(host, registers.address[6], static_cast<std::uint8_t>(active - 1U));
-    (void)read_byte(host, registers.address[6] + 1U);
-    write_byte(host, registers.address[6] + 1U, 0U);
-    (void)read_byte(host, registers.address[6] + 2U);
-    write_byte(host, registers.address[6] + 2U, 0U);
+    // User-selected unlimited credits preserve the balance and partial coins.
+    if (!host.unlimited_credits()) {
+        const auto active = read_byte(host, registers.address[6]);
+        write_byte(host, registers.address[6], static_cast<std::uint8_t>(active - 1U));
+        (void)read_byte(host, registers.address[6] + 1U);
+        write_byte(host, registers.address[6] + 1U, 0U);
+        (void)read_byte(host, registers.address[6] + 2U);
+        write_byte(host, registers.address[6] + 2U, 0U);
+    }
 
     host.write_memory_word(kPrivateRegion, registers.address[4], 0x0303U, kWordMask);
     write_byte(host, registers.address[4] + 2U, 0U);

@@ -31,6 +31,7 @@
 namespace {
 constexpr wchar_t kWindowClass[] = L"GainGroundNativeRuntime";
 constexpr UINT kPauseCommand = 1001U;
+constexpr UINT kUnlimitedCreditsCommand = 1002U;
 // Stage menu: 4 rounds of 10 stages map to original stage index round*10 + stage.
 constexpr UINT kStageCommandBase = 2000U;
 constexpr UINT kStageCount = 40U;
@@ -524,6 +525,12 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
         if (app) {
             const UINT command = LOWORD(wparam);
             if (command == kPauseCommand) app->toggle_pause(window);
+            else if (command == kUnlimitedCreditsCommand) {
+                app->host.set_unlimited_credits(!app->host.unlimited_credits());
+                CheckMenuItem(GetMenu(window), kUnlimitedCreditsCommand,
+                    MF_BYCOMMAND | (app->host.unlimited_credits() ? MF_CHECKED : MF_UNCHECKED));
+                DrawMenuBar(window);
+            }
             else if (command == kStageContinueCommand) app->select_stage(window, -1);
             else if (command == kSweepStartCommand) app->start_sweep();
             else if (command == kSweepStopCommand) app->stop_sweep("stopped");
@@ -728,7 +735,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     }
     const auto menu = CreateMenu();
     const auto stage_menu = CreatePopupMenu();
-    bool menu_ok = menu && stage_menu && AppendMenuW(menu, MF_STRING, kPauseCommand, L"&Pause (P)");
+    bool menu_ok = menu && stage_menu && AppendMenuW(menu, MF_STRING, kPauseCommand, L"&Pause (P)") &&
+        AppendMenuW(menu, MF_STRING | MF_UNCHECKED, kUnlimitedCreditsCommand, L"&Unlimited credits");
     for (UINT round = 0; menu_ok && round < kStageCount / 10U; ++round) {
         const auto round_menu = CreatePopupMenu();
         menu_ok = round_menu != nullptr;

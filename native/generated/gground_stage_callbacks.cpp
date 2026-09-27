@@ -6,6 +6,11 @@
 
 namespace gain_ground::translated {
 FunctionResult cpu_b_stage_0123ea(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_01249c(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_012598(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_01264a(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_012ad2(FunctionContext &) noexcept;
+FunctionResult cpu_b_stage_012742(FunctionContext &) noexcept;
 FunctionResult cpu_b_stage_013e38(FunctionContext &) noexcept;
 FunctionResult cpu_b_stage_013e8c(FunctionContext &) noexcept;
 FunctionResult cpu_b_stage_0143f8(FunctionContext &) noexcept;
@@ -722,6 +727,1893 @@ FunctionResult cpu_b_stage_0123ea(FunctionContext &c) noexcept {
         case 0x12492U:
         case 0x12498U:
         case 0x1249aU:
+            break;
+        default: return m.dispatch(c, pc, next, transfer_kind, m.state);
+        }
+    }
+}
+
+FunctionResult cpu_b_stage_01249c(FunctionContext &c) noexcept {
+    auto &r = c.registers;
+    if (!c.host || c.cpu != 1U || c.state != 0x72U)
+        return {TranslationStatus::contract_violation, 0U, r.program_counter};
+    unverified::Machine m{*c.host, r, 1U, 0x72U};
+    for (;;) {
+        const auto pc = r.program_counter;
+        auto next = pc;
+        std::uint8_t transfer_kind = 0U;
+        switch (pc) {
+        case 0x1249cU: { // 6100039e bsr.w $1283c
+            next = 0x124a0U;
+            const auto result = m.call(c, 253U, 0x1249cU, 0x1283cU, 0x124a0U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x124a0U: { // 65000866 bcs.w $12d08
+            next = 0x124a4U;
+            if ((r.status & 1U) != 0U) { next = 0x12d08U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x124a4U: { // 6100068c bsr.w $12b32
+            next = 0x124a8U;
+            const auto result = m.call(c, 257U, 0x124a4U, 0x12b32U, 0x124a8U);
+            if (result.status == TranslationStatus::complete && result.control == 8U) return FunctionResult::complete(1U, result.exit_program_counter);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x124a8U: { // 6500085e bcs.w $12d08
+            next = 0x124acU;
+            if ((r.status & 1U) != 0U) { next = 0x12d08U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x124acU: { // 536d0046 subq.w #$1, $46(a5)
+            next = 0x124b0U;
+            const auto source_value = 0x1U;
+            const auto destination_address = r.address[5] + 0x46U;
+            const auto destination_value = m.word(destination_address);
+            const auto value = m.sub(destination_value, source_value, 16U);
+            m.word(destination_address, value);
+            break;
+        }
+        case 0x124b0U: { // 6f000856 ble.w $12d08
+            next = 0x124b4U;
+            if ((r.status & 4U) != 0U || (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) != 0U) { next = 0x12d08U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x124b4U: { // 202d001e move.l $1e(a5), d0
+            next = 0x124b8U;
+            const auto source_address = r.address[5] + 0x1eU;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x124b8U: { // d1ad0012 add.l d0, $12(a5)
+            next = 0x124bcU;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x12U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x124bcU: { // 202d0026 move.l $26(a5), d0
+            next = 0x124c0U;
+            const auto source_address = r.address[5] + 0x26U;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x124c0U: { // d1ad001a add.l d0, $1a(a5)
+            next = 0x124c4U;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x1aU;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x124c4U: { // 086d0000003c bchg.b #$0, $3c(a5)
+            next = 0x124caU;
+            const auto destination_address = r.address[5] + 0x3cU;
+            const auto old = m.byte(destination_address);
+            const auto bit_mask = 1U << (0x0U & 7U);
+            r.status = static_cast<std::uint16_t>((r.status & ~4U) | ((old & bit_mask) ? 0U : 4U));
+            m.byte(destination_address, old ^ bit_mask);
+            break;
+        }
+        case 0x124caU: { // 672a beq.b $124f6
+            next = 0x124ccU;
+            if ((r.status & 4U) != 0U) { next = 0x124f6U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x124ccU: { // 582d003d addq.b #$4, $3d(a5)
+            next = 0x124d0U;
+            const auto source_value = 0x4U;
+            const auto destination_address = r.address[5] + 0x3dU;
+            const auto destination_value = m.byte(destination_address);
+            const auto value = m.add(destination_value, source_value, 8U);
+            m.byte(destination_address, value);
+            break;
+        }
+        case 0x124d0U: { // 0c2d0040003d cmpi.b #$40, $3d(a5)
+            next = 0x124d6U;
+            const auto source_value = 0x40U;
+            const auto destination_address = r.address[5] + 0x3dU;
+            const auto destination_value = m.byte(destination_address);
+            (void)m.sub(destination_value, source_value, 8U, true);
+            break;
+        }
+        case 0x124d6U: { // 6b06 bmi.b $124de
+            next = 0x124d8U;
+            if ((r.status & 8U) != 0U) { next = 0x124deU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x124d8U: { // 1b7c0030003d move.b #$30, $3d(a5)
+            next = 0x124deU;
+            const auto value = 0x30U;
+            const auto destination_address = r.address[5] + 0x3dU;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x124deU: { // 41fa0a12 lea.l $12ef2(pc), a0
+            next = 0x124e2U;
+            const auto source_address = 0x12ef2U;
+            r.address[0] = source_address;
+            break;
+        }
+        case 0x124e2U: { // 7000 moveq #$0, d0
+            next = 0x124e4U;
+            r.data[0] = 0x0U;
+            m.logic(r.data[0], 32U);
+            break;
+        }
+        case 0x124e4U: { // 102d003d move.b $3d(a5), d0
+            next = 0x124e8U;
+            const auto source_address = r.address[5] + 0x3dU;
+            const auto value = m.byte(source_address);
+            m.db(0U, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x124e8U: { // d0c0 adda.w d0, a0
+            next = 0x124eaU;
+            const auto source_value = r.data[0];
+            r.address[0] += static_cast<std::int16_t>(source_value);
+            break;
+        }
+        case 0x124eaU: { // 3b580010 move.w (a0)+, $10(a5)
+            next = 0x124eeU;
+            const auto source_address = r.address[0];
+            const auto value = m.word(source_address);
+            r.address[0] += 2U;
+            const auto destination_address = r.address[5] + 0x10U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x124eeU: { // 1b580001 move.b (a0)+, $1(a5)
+            next = 0x124f2U;
+            const auto source_address = r.address[0];
+            const auto value = m.byte(source_address);
+            r.address[0] += 1U;
+            const auto destination_address = r.address[5] + 0x1U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x124f2U: { // 1b580009 move.b (a0)+, $9(a5)
+            next = 0x124f6U;
+            const auto source_address = r.address[0];
+            const auto value = m.byte(source_address);
+            r.address[0] += 1U;
+            const auto destination_address = r.address[5] + 0x9U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x124f6U: { // 4eb900015d24 jsr $15d24.l
+            next = 0x124fcU;
+            const auto result = m.call(c, 280U, 0x124f6U, 0x15d24U, 0x124fcU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x124fcU: { // 4eb900015d3c jsr $15d3c.l
+            next = 0x12502U;
+            const auto result = m.call(c, 281U, 0x124fcU, 0x15d3cU, 0x12502U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12502U: { // 4eb900015df2 jsr $15df2.l
+            next = 0x12508U;
+            const auto result = m.call(c, 282U, 0x12502U, 0x15df2U, 0x12508U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12508U: { // 4e75 rts
+            next = 0x1250aU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12508U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        default: return {TranslationStatus::contract_violation, 0U, pc};
+        }
+        if (m.unresolved_bus) return {TranslationStatus::contract_violation, 0U, pc};
+        r.program_counter = next;
+        if (auto event = m.interrupt(c, pc, next)) return *event;
+        switch (next) {
+        case 0x1249cU:
+        case 0x124a0U:
+        case 0x124a4U:
+        case 0x124a8U:
+        case 0x124acU:
+        case 0x124b0U:
+        case 0x124b4U:
+        case 0x124b8U:
+        case 0x124bcU:
+        case 0x124c0U:
+        case 0x124c4U:
+        case 0x124caU:
+        case 0x124ccU:
+        case 0x124d0U:
+        case 0x124d6U:
+        case 0x124d8U:
+        case 0x124deU:
+        case 0x124e2U:
+        case 0x124e4U:
+        case 0x124e8U:
+        case 0x124eaU:
+        case 0x124eeU:
+        case 0x124f2U:
+        case 0x124f6U:
+        case 0x124fcU:
+        case 0x12502U:
+        case 0x12508U:
+            break;
+        default: return m.dispatch(c, pc, next, transfer_kind, m.state);
+        }
+    }
+}
+
+FunctionResult cpu_b_stage_012598(FunctionContext &c) noexcept {
+    auto &r = c.registers;
+    if (!c.host || c.cpu != 1U || c.state != 0x72U)
+        return {TranslationStatus::contract_violation, 0U, r.program_counter};
+    unverified::Machine m{*c.host, r, 1U, 0x72U};
+    for (;;) {
+        const auto pc = r.program_counter;
+        auto next = pc;
+        std::uint8_t transfer_kind = 0U;
+        switch (pc) {
+        case 0x12598U: { // 610002a2 bsr.w $1283c
+            next = 0x1259cU;
+            const auto result = m.call(c, 253U, 0x12598U, 0x1283cU, 0x1259cU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1259cU: { // 6500009c bcs.w $1263a
+            next = 0x125a0U;
+            if ((r.status & 1U) != 0U) { next = 0x1263aU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x125a0U: { // 6100060e bsr.w $12bb0
+            next = 0x125a4U;
+            const auto result = m.call(c, 258U, 0x125a0U, 0x12bb0U, 0x125a4U);
+            if (result.status == TranslationStatus::complete && result.control == 8U) return FunctionResult::complete(1U, result.exit_program_counter);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x125a4U: { // 65000094 bcs.w $1263a
+            next = 0x125a8U;
+            if ((r.status & 1U) != 0U) { next = 0x1263aU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x125a8U: { // 41fa0eb0 lea.l $1345a(pc), a0
+            next = 0x125acU;
+            const auto source_address = 0x1345aU;
+            r.address[0] = source_address;
+            break;
+        }
+        case 0x125acU: { // 30380c02 move.w $c02.w, d0
+            next = 0x125b0U;
+            const auto source_address = 0xc02U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x125b0U: { // d040 add.w d0, d0
+            next = 0x125b2U;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x125b2U: { // 30300000 move.w (a0, d0.w), d0
+            next = 0x125b6U;
+            const auto source_address = r.address[0] + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x125b6U: { // b06d0016 cmp.w $16(a5), d0
+            next = 0x125baU;
+            const auto source_address = r.address[5] + 0x16U;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[0];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x125baU: { // 6e06 bgt.b $125c2
+            next = 0x125bcU;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x125c2U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x125bcU: { // 42ad0022 clr.l $22(a5)
+            next = 0x125c0U;
+            const auto destination_address = r.address[5] + 0x22U;
+            const auto value = m.lng(destination_address);
+            (void)value;
+            m.word(destination_address + 2U, 0U);
+            m.word(destination_address, (0U) >> 16U);
+            m.logic(0U, 32U);
+            break;
+        }
+        case 0x125c0U: { // 601a bra.b $125dc
+            next = 0x125c2U;
+            if (true) { next = 0x125dcU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x125c2U: { // 04ad000020000022 subi.l #$2000, $22(a5)
+            next = 0x125caU;
+            const auto source_value = 0x2000U;
+            const auto destination_address = r.address[5] + 0x22U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.sub(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x125caU: { // 0cad000020000022 cmpi.l #$2000, $22(a5)
+            next = 0x125d2U;
+            const auto source_value = 0x2000U;
+            const auto destination_address = r.address[5] + 0x22U;
+            const auto destination_value = m.lng(destination_address);
+            (void)m.sub(destination_value, source_value, 32U, true);
+            break;
+        }
+        case 0x125d2U: { // 6a08 bpl.b $125dc
+            next = 0x125d4U;
+            if ((r.status & 8U) == 0U) { next = 0x125dcU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x125d4U: { // 2b7c000020000022 move.l #$2000, $22(a5)
+            next = 0x125dcU;
+            const auto value = 0x2000U;
+            const auto destination_address = r.address[5] + 0x22U;
+            m.lng(destination_address, value);
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x125dcU: { // 202d001e move.l $1e(a5), d0
+            next = 0x125e0U;
+            const auto source_address = r.address[5] + 0x1eU;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x125e0U: { // d1ad0012 add.l d0, $12(a5)
+            next = 0x125e4U;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x12U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x125e4U: { // 202d0022 move.l $22(a5), d0
+            next = 0x125e8U;
+            const auto source_address = r.address[5] + 0x22U;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x125e8U: { // d1ad0016 add.l d0, $16(a5)
+            next = 0x125ecU;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x16U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x125ecU: { // 202d0026 move.l $26(a5), d0
+            next = 0x125f0U;
+            const auto source_address = r.address[5] + 0x26U;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x125f0U: { // d1ad001a add.l d0, $1a(a5)
+            next = 0x125f4U;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x1aU;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x125f4U: { // 302d0016 move.w $16(a5), d0
+            next = 0x125f8U;
+            const auto source_address = r.address[5] + 0x16U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x125f8U: { // e240 asr.w #$1, d0
+            next = 0x125faU;
+            m.shift_word(0U, 1U, false, true);
+            break;
+        }
+        case 0x125faU: { // d07c003f add.w #$3f, d0
+            next = 0x125feU;
+            const auto source_value = 0x3fU;
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x125feU: { // 1b400010 move.b d0, $10(a5)
+            next = 0x12602U;
+            const auto value = r.data[0];
+            const auto destination_address = r.address[5] + 0x10U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x12602U: { // 1b400011 move.b d0, $11(a5)
+            next = 0x12606U;
+            const auto value = r.data[0];
+            const auto destination_address = r.address[5] + 0x11U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x12606U: { // 086d0002003d bchg.b #$2, $3d(a5)
+            next = 0x1260cU;
+            const auto destination_address = r.address[5] + 0x3dU;
+            const auto old = m.byte(destination_address);
+            const auto bit_mask = 1U << (0x2U & 7U);
+            r.status = static_cast<std::uint16_t>((r.status & ~4U) | ((old & bit_mask) ? 0U : 4U));
+            m.byte(destination_address, old ^ bit_mask);
+            break;
+        }
+        case 0x1260cU: { // 302d0058 move.w $58(a5), d0
+            next = 0x12610U;
+            const auto source_address = r.address[5] + 0x58U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12610U: { // ea48 lsr.w #$5, d0
+            next = 0x12612U;
+            m.shift_word(0U, 5U, false, false);
+            break;
+        }
+        case 0x12612U: { // d02d003d add.b $3d(a5), d0
+            next = 0x12616U;
+            const auto source_address = r.address[5] + 0x3dU;
+            const auto source_value = m.byte(source_address);
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 8U);
+            m.db(0U, value);
+            break;
+        }
+        case 0x12616U: { // 41fa0e92 lea.l $134aa(pc), a0
+            next = 0x1261aU;
+            const auto source_address = 0x134aaU;
+            r.address[0] = source_address;
+            break;
+        }
+        case 0x1261aU: { // 3b7000000006 move.w (a0, d0.w), $6(a5)
+            next = 0x12620U;
+            const auto source_address = r.address[0] + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.word(source_address);
+            const auto destination_address = r.address[5] + 0x6U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12620U: { // 1b7000020001 move.b $2(a0, d0.w), $1(a5)
+            next = 0x12626U;
+            const auto source_address = r.address[0] + 0x2U + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.byte(source_address);
+            const auto destination_address = r.address[5] + 0x1U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x12626U: { // 4eb900015d24 jsr $15d24.l
+            next = 0x1262cU;
+            const auto result = m.call(c, 280U, 0x12626U, 0x15d24U, 0x1262cU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1262cU: { // 4eb900015d3c jsr $15d3c.l
+            next = 0x12632U;
+            const auto result = m.call(c, 281U, 0x1262cU, 0x15d3cU, 0x12632U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12632U: { // 4eb900015df2 jsr $15df2.l
+            next = 0x12638U;
+            const auto result = m.call(c, 282U, 0x12632U, 0x15df2U, 0x12638U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12638U: { // 4e75 rts
+            next = 0x1263aU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12638U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        case 0x1263aU: { // 303c0014 move.w #$14, d0
+            next = 0x1263eU;
+            const auto value = 0x14U;
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x1263eU: { // 4eb900016ff8 jsr $16ff8.l
+            next = 0x12644U;
+            const auto result = m.call(c, 308U, 0x1263eU, 0x16ff8U, 0x12644U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12644U: { // 61000708 bsr.w $12d4e
+            next = 0x12648U;
+            const auto result = m.call(c, 264U, 0x12644U, 0x12d4eU, 0x12648U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12648U: { // 4e75 rts
+            next = 0x1264aU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12648U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        default: return {TranslationStatus::contract_violation, 0U, pc};
+        }
+        if (m.unresolved_bus) return {TranslationStatus::contract_violation, 0U, pc};
+        r.program_counter = next;
+        if (auto event = m.interrupt(c, pc, next)) return *event;
+        switch (next) {
+        case 0x12598U:
+        case 0x1259cU:
+        case 0x125a0U:
+        case 0x125a4U:
+        case 0x125a8U:
+        case 0x125acU:
+        case 0x125b0U:
+        case 0x125b2U:
+        case 0x125b6U:
+        case 0x125baU:
+        case 0x125bcU:
+        case 0x125c0U:
+        case 0x125c2U:
+        case 0x125caU:
+        case 0x125d2U:
+        case 0x125d4U:
+        case 0x125dcU:
+        case 0x125e0U:
+        case 0x125e4U:
+        case 0x125e8U:
+        case 0x125ecU:
+        case 0x125f0U:
+        case 0x125f4U:
+        case 0x125f8U:
+        case 0x125faU:
+        case 0x125feU:
+        case 0x12602U:
+        case 0x12606U:
+        case 0x1260cU:
+        case 0x12610U:
+        case 0x12612U:
+        case 0x12616U:
+        case 0x1261aU:
+        case 0x12620U:
+        case 0x12626U:
+        case 0x1262cU:
+        case 0x12632U:
+        case 0x12638U:
+        case 0x1263aU:
+        case 0x1263eU:
+        case 0x12644U:
+        case 0x12648U:
+            break;
+        default: return m.dispatch(c, pc, next, transfer_kind, m.state);
+        }
+    }
+}
+
+FunctionResult cpu_b_stage_01264a(FunctionContext &c) noexcept {
+    auto &r = c.registers;
+    if (!c.host || c.cpu != 1U || c.state != 0x72U)
+        return {TranslationStatus::contract_violation, 0U, r.program_counter};
+    unverified::Machine m{*c.host, r, 1U, 0x72U};
+    for (;;) {
+        const auto pc = r.program_counter;
+        auto next = pc;
+        std::uint8_t transfer_kind = 0U;
+        switch (pc) {
+        case 0x12610U: { // ea48 lsr.w #$5, d0
+            next = 0x12612U;
+            m.shift_word(0U, 5U, false, false);
+            break;
+        }
+        case 0x12612U: { // d02d003d add.b $3d(a5), d0
+            next = 0x12616U;
+            const auto source_address = r.address[5] + 0x3dU;
+            const auto source_value = m.byte(source_address);
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 8U);
+            m.db(0U, value);
+            break;
+        }
+        case 0x12616U: { // 41fa0e92 lea.l $134aa(pc), a0
+            next = 0x1261aU;
+            const auto source_address = 0x134aaU;
+            r.address[0] = source_address;
+            break;
+        }
+        case 0x1261aU: { // 3b7000000006 move.w (a0, d0.w), $6(a5)
+            next = 0x12620U;
+            const auto source_address = r.address[0] + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.word(source_address);
+            const auto destination_address = r.address[5] + 0x6U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12620U: { // 1b7000020001 move.b $2(a0, d0.w), $1(a5)
+            next = 0x12626U;
+            const auto source_address = r.address[0] + 0x2U + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.byte(source_address);
+            const auto destination_address = r.address[5] + 0x1U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x12626U: { // 4eb900015d24 jsr $15d24.l
+            next = 0x1262cU;
+            const auto result = m.call(c, 280U, 0x12626U, 0x15d24U, 0x1262cU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1262cU: { // 4eb900015d3c jsr $15d3c.l
+            next = 0x12632U;
+            const auto result = m.call(c, 281U, 0x1262cU, 0x15d3cU, 0x12632U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12632U: { // 4eb900015df2 jsr $15df2.l
+            next = 0x12638U;
+            const auto result = m.call(c, 282U, 0x12632U, 0x15df2U, 0x12638U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12638U: { // 4e75 rts
+            next = 0x1263aU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12638U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        case 0x1263aU: { // 303c0014 move.w #$14, d0
+            next = 0x1263eU;
+            const auto value = 0x14U;
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x1263eU: { // 4eb900016ff8 jsr $16ff8.l
+            next = 0x12644U;
+            const auto result = m.call(c, 308U, 0x1263eU, 0x16ff8U, 0x12644U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12644U: { // 61000708 bsr.w $12d4e
+            next = 0x12648U;
+            const auto result = m.call(c, 264U, 0x12644U, 0x12d4eU, 0x12648U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12648U: { // 4e75 rts
+            next = 0x1264aU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12648U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        case 0x1264aU: { // 610001f0 bsr.w $1283c
+            next = 0x1264eU;
+            const auto result = m.call(c, 253U, 0x1264aU, 0x1283cU, 0x1264eU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1264eU: { // 65ea bcs.b $1263a
+            next = 0x12650U;
+            if ((r.status & 1U) != 0U) { next = 0x1263aU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12650U: { // 610004e0 bsr.w $12b32
+            next = 0x12654U;
+            const auto result = m.call(c, 257U, 0x12650U, 0x12b32U, 0x12654U);
+            if (result.status == TranslationStatus::complete && result.control == 8U) return FunctionResult::complete(1U, result.exit_program_counter);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12654U: { // 65e4 bcs.b $1263a
+            next = 0x12656U;
+            if ((r.status & 1U) != 0U) { next = 0x1263aU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12656U: { // 322d0058 move.w $58(a5), d1
+            next = 0x1265aU;
+            const auto source_address = r.address[5] + 0x58U;
+            const auto value = m.word(source_address);
+            m.dw(1U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x1265aU: { // 0c410400 cmpi.w #$400, d1
+            next = 0x1265eU;
+            const auto source_value = 0x400U;
+            const auto destination_value = r.data[1];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x1265eU: { // 652a bcs.b $1268a
+            next = 0x12660U;
+            if ((r.status & 1U) != 0U) { next = 0x1268aU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12660U: { // d26d0046 add.w $46(a5), d1
+            next = 0x12664U;
+            const auto source_address = r.address[5] + 0x46U;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(1U, value);
+            break;
+        }
+        case 0x12664U: { // 024107ff andi.w #$7ff, d1
+            next = 0x12668U;
+            const auto source_value = 0x7ffU;
+            const auto destination_value = r.data[1];
+            const auto value = destination_value & source_value;
+            m.logic(value, 16U);
+            m.dw(1U, value);
+            break;
+        }
+        case 0x12668U: { // 3b410058 move.w d1, $58(a5)
+            next = 0x1266cU;
+            const auto value = r.data[1];
+            const auto destination_address = r.address[5] + 0x58U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x1266cU: { // 4eb900016372 jsr $16372.l
+            next = 0x12672U;
+            const auto result = m.call(c, 306U, 0x1266cU, 0x16372U, 0x12672U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12672U: { // 48c0 ext.l d0
+            next = 0x12674U;
+            r.data[0] = static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::int16_t>(r.data[0])));
+            m.logic(r.data[0], 32U);
+            break;
+        }
+        case 0x12674U: { // eb80 asl.l #$5, d0
+            next = 0x12676U;
+            auto value = r.data[0];
+            bool carry = false;
+            bool overflow = false;
+            for (unsigned step = 0U; step != 5U; ++step) {
+                const auto before = value;
+                carry = (before & 0x80000000U) != 0U;
+                value <<= 1U;
+                overflow = overflow || ((before ^ value) & 0x80000000U) != 0U;
+            }
+            r.data[0] = value;
+            m.logic(value, 32U);
+            r.status = static_cast<std::uint16_t>((r.status & ~0x13U) | (carry ? 0x11U : 0U) | (overflow ? 2U : 0U));
+            break;
+        }
+        case 0x12676U: { // d1ad0012 add.l d0, $12(a5)
+            next = 0x1267aU;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x12U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x1267aU: { // 48c1 ext.l d1
+            next = 0x1267cU;
+            r.data[1] = static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::int16_t>(r.data[1])));
+            m.logic(r.data[1], 32U);
+            break;
+        }
+        case 0x1267cU: { // e581 asl.l #$2, d1
+            next = 0x1267eU;
+            auto value = r.data[1];
+            bool carry = false;
+            bool overflow = false;
+            for (unsigned step = 0U; step != 2U; ++step) {
+                const auto before = value;
+                carry = (before & 0x80000000U) != 0U;
+                value <<= 1U;
+                overflow = overflow || ((before ^ value) & 0x80000000U) != 0U;
+            }
+            r.data[1] = value;
+            m.logic(value, 32U);
+            r.status = static_cast<std::uint16_t>((r.status & ~0x13U) | (carry ? 0x11U : 0U) | (overflow ? 2U : 0U));
+            break;
+        }
+        case 0x1267eU: { // 2001 move.l d1, d0
+            next = 0x12680U;
+            const auto value = r.data[1];
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x12680U: { // d281 add.l d1, d1
+            next = 0x12682U;
+            const auto source_value = r.data[1];
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 32U);
+            r.data[1] = value;
+            break;
+        }
+        case 0x12682U: { // d280 add.l d0, d1
+            next = 0x12684U;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 32U);
+            r.data[1] = value;
+            break;
+        }
+        case 0x12684U: { // d3ad001a add.l d1, $1a(a5)
+            next = 0x12688U;
+            const auto source_value = r.data[1];
+            const auto destination_address = r.address[5] + 0x1aU;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x12688U: { // 6010 bra.b $1269a
+            next = 0x1268aU;
+            if (true) { next = 0x1269aU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x1268aU: { // 202d001e move.l $1e(a5), d0
+            next = 0x1268eU;
+            const auto source_address = r.address[5] + 0x1eU;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x1268eU: { // d1ad0012 add.l d0, $12(a5)
+            next = 0x12692U;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x12U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x12692U: { // 202d0026 move.l $26(a5), d0
+            next = 0x12696U;
+            const auto source_address = r.address[5] + 0x26U;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x12696U: { // d1ad001a add.l d0, $1a(a5)
+            next = 0x1269aU;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x1aU;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x1269aU: { // 086d0002003d bchg.b #$2, $3d(a5)
+            next = 0x126a0U;
+            const auto destination_address = r.address[5] + 0x3dU;
+            const auto old = m.byte(destination_address);
+            const auto bit_mask = 1U << (0x2U & 7U);
+            r.status = static_cast<std::uint16_t>((r.status & ~4U) | ((old & bit_mask) ? 0U : 4U));
+            m.byte(destination_address, old ^ bit_mask);
+            break;
+        }
+        case 0x126a0U: { // 302d0058 move.w $58(a5), d0
+            next = 0x126a4U;
+            const auto source_address = r.address[5] + 0x58U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x126a4U: { // d07c0080 add.w #$80, d0
+            next = 0x126a8U;
+            const auto source_value = 0x80U;
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x126a8U: { // 02400700 andi.w #$700, d0
+            next = 0x126acU;
+            const auto source_value = 0x700U;
+            const auto destination_value = r.data[0];
+            const auto value = destination_value & source_value;
+            m.logic(value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x126acU: { // 6000ff62 bra.w $12610
+            next = 0x126b0U;
+            if (true) { next = 0x12610U; transfer_kind = 1U; }
+            break;
+        }
+        default: return {TranslationStatus::contract_violation, 0U, pc};
+        }
+        if (m.unresolved_bus) return {TranslationStatus::contract_violation, 0U, pc};
+        r.program_counter = next;
+        if (auto event = m.interrupt(c, pc, next)) return *event;
+        switch (next) {
+        case 0x12610U:
+        case 0x12612U:
+        case 0x12616U:
+        case 0x1261aU:
+        case 0x12620U:
+        case 0x12626U:
+        case 0x1262cU:
+        case 0x12632U:
+        case 0x12638U:
+        case 0x1263aU:
+        case 0x1263eU:
+        case 0x12644U:
+        case 0x12648U:
+        case 0x1264aU:
+        case 0x1264eU:
+        case 0x12650U:
+        case 0x12654U:
+        case 0x12656U:
+        case 0x1265aU:
+        case 0x1265eU:
+        case 0x12660U:
+        case 0x12664U:
+        case 0x12668U:
+        case 0x1266cU:
+        case 0x12672U:
+        case 0x12674U:
+        case 0x12676U:
+        case 0x1267aU:
+        case 0x1267cU:
+        case 0x1267eU:
+        case 0x12680U:
+        case 0x12682U:
+        case 0x12684U:
+        case 0x12688U:
+        case 0x1268aU:
+        case 0x1268eU:
+        case 0x12692U:
+        case 0x12696U:
+        case 0x1269aU:
+        case 0x126a0U:
+        case 0x126a4U:
+        case 0x126a8U:
+        case 0x126acU:
+            break;
+        default: return m.dispatch(c, pc, next, transfer_kind, m.state);
+        }
+    }
+}
+
+FunctionResult cpu_b_stage_012ad2(FunctionContext &c) noexcept {
+    auto &r = c.registers;
+    if (!c.host || c.cpu != 1U || c.state != 0x72U)
+        return {TranslationStatus::contract_violation, 0U, r.program_counter};
+    unverified::Machine m{*c.host, r, 1U, 0x72U};
+    for (;;) {
+        const auto pc = r.program_counter;
+        auto next = pc;
+        std::uint8_t transfer_kind = 0U;
+        switch (pc) {
+        case 0x12ad2U: { // 323cfff9 move.w #$fff9, d1
+            next = 0x12ad6U;
+            const auto value = 0xfff9U;
+            m.dw(1U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12ad6U: { // 343c0007 move.w #$7, d2
+            next = 0x12adaU;
+            const auto value = 0x7U;
+            m.dw(2U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12adaU: { // 302e0012 move.w $12(a6), d0
+            next = 0x12adeU;
+            const auto source_address = r.address[6] + 0x12U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12adeU: { // d240 add.w d0, d1
+            next = 0x12ae0U;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(1U, value);
+            break;
+        }
+        case 0x12ae0U: { // d440 add.w d0, d2
+            next = 0x12ae2U;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[2];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(2U, value);
+            break;
+        }
+        case 0x12ae2U: { // b26d002c cmp.w $2c(a5), d1
+            next = 0x12ae6U;
+            const auto source_address = r.address[5] + 0x2cU;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[1];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x12ae6U: { // 6e44 bgt.b $12b2c
+            next = 0x12ae8U;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x12b2cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12ae8U: { // b46d002a cmp.w $2a(a5), d2
+            next = 0x12aecU;
+            const auto source_address = r.address[5] + 0x2aU;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[2];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x12aecU: { // 6b3e bmi.b $12b2c
+            next = 0x12aeeU;
+            if ((r.status & 8U) != 0U) { next = 0x12b2cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12aeeU: { // 323cfff8 move.w #$fff8, d1
+            next = 0x12af2U;
+            const auto value = 0xfff8U;
+            m.dw(1U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12af2U: { // 343c000c move.w #$c, d2
+            next = 0x12af6U;
+            const auto value = 0xcU;
+            m.dw(2U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12af6U: { // 302e0016 move.w $16(a6), d0
+            next = 0x12afaU;
+            const auto source_address = r.address[6] + 0x16U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12afaU: { // d240 add.w d0, d1
+            next = 0x12afcU;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(1U, value);
+            break;
+        }
+        case 0x12afcU: { // d440 add.w d0, d2
+            next = 0x12afeU;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[2];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(2U, value);
+            break;
+        }
+        case 0x12afeU: { // b26d0030 cmp.w $30(a5), d1
+            next = 0x12b02U;
+            const auto source_address = r.address[5] + 0x30U;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[1];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x12b02U: { // 6e28 bgt.b $12b2c
+            next = 0x12b04U;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x12b2cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12b04U: { // b46d002e cmp.w $2e(a5), d2
+            next = 0x12b08U;
+            const auto source_address = r.address[5] + 0x2eU;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[2];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x12b08U: { // 6b22 bmi.b $12b2c
+            next = 0x12b0aU;
+            if ((r.status & 8U) != 0U) { next = 0x12b2cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12b0aU: { // 323cfffa move.w #$fffa, d1
+            next = 0x12b0eU;
+            const auto value = 0xfffaU;
+            m.dw(1U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12b0eU: { // 343c0006 move.w #$6, d2
+            next = 0x12b12U;
+            const auto value = 0x6U;
+            m.dw(2U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12b12U: { // 302e001a move.w $1a(a6), d0
+            next = 0x12b16U;
+            const auto source_address = r.address[6] + 0x1aU;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12b16U: { // d240 add.w d0, d1
+            next = 0x12b18U;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(1U, value);
+            break;
+        }
+        case 0x12b18U: { // d440 add.w d0, d2
+            next = 0x12b1aU;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[2];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(2U, value);
+            break;
+        }
+        case 0x12b1aU: { // b26d0034 cmp.w $34(a5), d1
+            next = 0x12b1eU;
+            const auto source_address = r.address[5] + 0x34U;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[1];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x12b1eU: { // 6e0c bgt.b $12b2c
+            next = 0x12b20U;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x12b2cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12b20U: { // b46d0032 cmp.w $32(a5), d2
+            next = 0x12b24U;
+            const auto source_address = r.address[5] + 0x32U;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[2];
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x12b24U: { // 6b06 bmi.b $12b2c
+            next = 0x12b26U;
+            if ((r.status & 8U) != 0U) { next = 0x12b2cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12b26U: { // 44fc0001 move.w #$1, ccr
+            next = 0x12b2aU;
+            r.status = static_cast<std::uint16_t>((r.status & 0xffe0U) | (0x1U & 0x1fU));
+            break;
+        }
+        case 0x12b2aU: { // 4e75 rts
+            next = 0x12b2cU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12b2aU, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        case 0x12b2cU: { // 44fc0000 move.w #$0, ccr
+            next = 0x12b30U;
+            r.status = static_cast<std::uint16_t>((r.status & 0xffe0U) | (0x0U & 0x1fU));
+            break;
+        }
+        case 0x12b30U: { // 4e75 rts
+            next = 0x12b32U;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x12b30U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        default: return {TranslationStatus::contract_violation, 0U, pc};
+        }
+        if (m.unresolved_bus) return {TranslationStatus::contract_violation, 0U, pc};
+        r.program_counter = next;
+        if (auto event = m.interrupt(c, pc, next)) return *event;
+        switch (next) {
+        case 0x12ad2U:
+        case 0x12ad6U:
+        case 0x12adaU:
+        case 0x12adeU:
+        case 0x12ae0U:
+        case 0x12ae2U:
+        case 0x12ae6U:
+        case 0x12ae8U:
+        case 0x12aecU:
+        case 0x12aeeU:
+        case 0x12af2U:
+        case 0x12af6U:
+        case 0x12afaU:
+        case 0x12afcU:
+        case 0x12afeU:
+        case 0x12b02U:
+        case 0x12b04U:
+        case 0x12b08U:
+        case 0x12b0aU:
+        case 0x12b0eU:
+        case 0x12b12U:
+        case 0x12b16U:
+        case 0x12b18U:
+        case 0x12b1aU:
+        case 0x12b1eU:
+        case 0x12b20U:
+        case 0x12b24U:
+        case 0x12b26U:
+        case 0x12b2aU:
+        case 0x12b2cU:
+        case 0x12b30U:
+            break;
+        default: return m.dispatch(c, pc, next, transfer_kind, m.state);
+        }
+    }
+}
+
+FunctionResult cpu_b_stage_012742(FunctionContext &c) noexcept {
+    auto &r = c.registers;
+    if (!c.host || c.cpu != 1U || c.state != 0x72U)
+        return {TranslationStatus::contract_violation, 0U, r.program_counter};
+    unverified::Machine m{*c.host, r, 1U, 0x72U};
+    for (;;) {
+        const auto pc = r.program_counter;
+        auto next = pc;
+        std::uint8_t transfer_kind = 0U;
+        switch (pc) {
+        case 0x12742U: { // 610000f8 bsr.w $1283c
+            next = 0x12746U;
+            const auto result = m.call(c, 253U, 0x12742U, 0x1283cU, 0x12746U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12746U: { // 650005c0 bcs.w $12d08
+            next = 0x1274aU;
+            if ((r.status & 1U) != 0U) { next = 0x12d08U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x1274aU: { // 610003e6 bsr.w $12b32
+            next = 0x1274eU;
+            const auto result = m.call(c, 257U, 0x1274aU, 0x12b32U, 0x1274eU);
+            if (result.status == TranslationStatus::complete && result.control == 8U) return FunctionResult::complete(1U, result.exit_program_counter);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1274eU: { // 650005b8 bcs.w $12d08
+            next = 0x12752U;
+            if ((r.status & 1U) != 0U) { next = 0x12d08U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12752U: { // 302d0042 move.w $42(a5), d0
+            next = 0x12756U;
+            const auto source_address = r.address[5] + 0x42U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12756U: { // e540 asl.w #$2, d0
+            next = 0x12758U;
+            m.asl_word(0U, 2U);
+            break;
+        }
+        case 0x12758U: { // 4efb0002 jmp $1275c(pc, d0.w)
+            next = 0x1275cU;
+            next = (0x1275cU + static_cast<std::int16_t>(r.data[0])) & 0xffffffU;
+            transfer_kind = 1U;
+            break;
+        }
+        case 0x1275cU: { // 6000000a bra.w $12768
+            next = 0x12760U;
+            if (true) { next = 0x12768U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12760U: { // 6000002c bra.w $1278e
+            next = 0x12764U;
+            if (true) { next = 0x1278eU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12764U: { // 60000040 bra.w $127a6
+            next = 0x12768U;
+            if (true) { next = 0x127a6U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12768U: { // 202d001e move.l $1e(a5), d0
+            next = 0x1276cU;
+            const auto source_address = r.address[5] + 0x1eU;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x1276cU: { // d1ad0012 add.l d0, $12(a5)
+            next = 0x12770U;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x12U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x12770U: { // 202d0026 move.l $26(a5), d0
+            next = 0x12774U;
+            const auto source_address = r.address[5] + 0x26U;
+            const auto value = m.lng(source_address);
+            r.data[0] = value;
+            m.logic(value, 32U);
+            break;
+        }
+        case 0x12774U: { // d1ad001a add.l d0, $1a(a5)
+            next = 0x12778U;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x1aU;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x12778U: { // 536d0046 subq.w #$1, $46(a5)
+            next = 0x1277cU;
+            const auto source_value = 0x1U;
+            const auto destination_address = r.address[5] + 0x46U;
+            const auto destination_value = m.word(destination_address);
+            const auto value = m.sub(destination_value, source_value, 16U);
+            m.word(destination_address, value);
+            break;
+        }
+        case 0x1277cU: { // 6e000084 bgt.w $12802
+            next = 0x12780U;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x12802U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12780U: { // 3b7c00010042 move.w #$1, $42(a5)
+            next = 0x12786U;
+            const auto value = 0x1U;
+            const auto destination_address = r.address[5] + 0x42U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12786U: { // 3b7c002a0046 move.w #$2a, $46(a5)
+            next = 0x1278cU;
+            const auto value = 0x2aU;
+            const auto destination_address = r.address[5] + 0x46U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x1278cU: { // 6074 bra.b $12802
+            next = 0x1278eU;
+            if (true) { next = 0x12802U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x1278eU: { // 536d0046 subq.w #$1, $46(a5)
+            next = 0x12792U;
+            const auto source_value = 0x1U;
+            const auto destination_address = r.address[5] + 0x46U;
+            const auto destination_value = m.word(destination_address);
+            const auto value = m.sub(destination_value, source_value, 16U);
+            m.word(destination_address, value);
+            break;
+        }
+        case 0x12792U: { // 6e30 bgt.b $127c4
+            next = 0x12794U;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x127c4U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x12794U: { // 3b7c00020042 move.w #$2, $42(a5)
+            next = 0x1279aU;
+            const auto value = 0x2U;
+            const auto destination_address = r.address[5] + 0x42U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x1279aU: { // 3b7c002a0046 move.w #$2a, $46(a5)
+            next = 0x127a0U;
+            const auto value = 0x2aU;
+            const auto destination_address = r.address[5] + 0x46U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x127a0U: { // e0ed0048 asr.w $48(a5)
+            next = 0x127a4U;
+            const auto address = r.address[5] + 0x48U;
+            const auto old = m.word(address);
+            const auto value = static_cast<std::uint16_t>((old >> 1U) | (old & 0x8000U));
+            m.logic(value, 16U);
+            r.status = static_cast<std::uint16_t>((r.status & ~0x11U) | ((old & 1U) ? 0x11U : 0U));
+            m.word(address, value);
+            break;
+        }
+        case 0x127a4U: { // 601e bra.b $127c4
+            next = 0x127a6U;
+            if (true) { next = 0x127c4U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x127a6U: { // 536d0046 subq.w #$1, $46(a5)
+            next = 0x127aaU;
+            const auto source_value = 0x1U;
+            const auto destination_address = r.address[5] + 0x46U;
+            const auto destination_value = m.word(destination_address);
+            const auto value = m.sub(destination_value, source_value, 16U);
+            m.word(destination_address, value);
+            break;
+        }
+        case 0x127aaU: { // 6e18 bgt.b $127c4
+            next = 0x127acU;
+            if ((r.status & 4U) == 0U && (((r.status >> 3U) ^ (r.status >> 1U)) & 1U) == 0U) { next = 0x127c4U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x127acU: { // 302d0046 move.w $46(a5), d0
+            next = 0x127b0U;
+            const auto source_address = r.address[5] + 0x46U;
+            const auto value = m.word(source_address);
+            m.dw(0U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x127b0U: { // d07c001f add.w #$1f, d0
+            next = 0x127b4U;
+            const auto source_value = 0x1fU;
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x127b4U: { // 6a04 bpl.b $127ba
+            next = 0x127b6U;
+            if ((r.status & 8U) == 0U) { next = 0x127baU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x127b6U: { // 4215 clr.b (a5)
+            next = 0x127b8U;
+            const auto destination_address = r.address[5];
+            const auto value = m.byte(destination_address);
+            (void)value;
+            m.byte(destination_address, 0U);
+            m.logic(0U, 8U);
+            break;
+        }
+        case 0x127b8U: { // 4e75 rts
+            next = 0x127baU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x127b8U, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        case 0x127baU: { // d040 add.w d0, d0
+            next = 0x127bcU;
+            const auto source_value = r.data[0];
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x127bcU: { // 1b400010 move.b d0, $10(a5)
+            next = 0x127c0U;
+            const auto value = r.data[0];
+            const auto destination_address = r.address[5] + 0x10U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x127c0U: { // 1b400011 move.b d0, $11(a5)
+            next = 0x127c4U;
+            const auto value = r.data[0];
+            const auto destination_address = r.address[5] + 0x11U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x127c4U: { // 3c6d0036 movea.w $36(a5), a6
+            next = 0x127c8U;
+            const auto source_address = r.address[5] + 0x36U;
+            const auto value = m.word(source_address);
+            r.address[6] = static_cast<std::uint32_t>(static_cast<std::int16_t>(value));
+            break;
+        }
+        case 0x127c8U: { // 0c6e00010042 cmpi.w #$1, $42(a6)
+            next = 0x127ceU;
+            const auto source_value = 0x1U;
+            const auto destination_address = r.address[6] + 0x42U;
+            const auto destination_value = m.word(destination_address);
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x127ceU: { // 6610 bne.b $127e0
+            next = 0x127d0U;
+            if ((r.status & 4U) == 0U) { next = 0x127e0U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x127d0U: { // 0c6e00050044 cmpi.w #$5, $44(a6)
+            next = 0x127d6U;
+            const auto source_value = 0x5U;
+            const auto destination_address = r.address[6] + 0x44U;
+            const auto destination_value = m.word(destination_address);
+            (void)m.sub(destination_value, source_value, 16U, true);
+            break;
+        }
+        case 0x127d6U: { // 6608 bne.b $127e0
+            next = 0x127d8U;
+            if ((r.status & 4U) == 0U) { next = 0x127e0U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x127d8U: { // 610002f8 bsr.w $12ad2
+            next = 0x127dcU;
+            const auto result = m.call(c, 959U, 0x127d8U, 0x12ad2U, 0x127dcU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x127dcU: { // 6500052a bcs.w $12d08
+            next = 0x127e0U;
+            if ((r.status & 1U) != 0U) { next = 0x12d08U; transfer_kind = 1U; }
+            break;
+        }
+        case 0x127e0U: { // 322d0048 move.w $48(a5), d1
+            next = 0x127e4U;
+            const auto source_address = r.address[5] + 0x48U;
+            const auto value = m.word(source_address);
+            m.dw(1U, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x127e4U: { // d26d0058 add.w $58(a5), d1
+            next = 0x127e8U;
+            const auto source_address = r.address[5] + 0x58U;
+            const auto source_value = m.word(source_address);
+            const auto destination_value = r.data[1];
+            const auto value = m.add(destination_value, source_value, 16U);
+            m.dw(1U, value);
+            break;
+        }
+        case 0x127e8U: { // 3b410058 move.w d1, $58(a5)
+            next = 0x127ecU;
+            const auto value = r.data[1];
+            const auto destination_address = r.address[5] + 0x58U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x127ecU: { // 4eb900016372 jsr $16372.l
+            next = 0x127f2U;
+            const auto result = m.call(c, 306U, 0x127ecU, 0x16372U, 0x127f2U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x127f2U: { // 48c0 ext.l d0
+            next = 0x127f4U;
+            r.data[0] = static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::int16_t>(r.data[0])));
+            m.logic(r.data[0], 32U);
+            break;
+        }
+        case 0x127f4U: { // e980 asl.l #$4, d0
+            next = 0x127f6U;
+            auto value = r.data[0];
+            bool carry = false;
+            bool overflow = false;
+            for (unsigned step = 0U; step != 4U; ++step) {
+                const auto before = value;
+                carry = (before & 0x80000000U) != 0U;
+                value <<= 1U;
+                overflow = overflow || ((before ^ value) & 0x80000000U) != 0U;
+            }
+            r.data[0] = value;
+            m.logic(value, 32U);
+            r.status = static_cast<std::uint16_t>((r.status & ~0x13U) | (carry ? 0x11U : 0U) | (overflow ? 2U : 0U));
+            break;
+        }
+        case 0x127f6U: { // d1ad0012 add.l d0, $12(a5)
+            next = 0x127faU;
+            const auto source_value = r.data[0];
+            const auto destination_address = r.address[5] + 0x12U;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x127faU: { // 48c1 ext.l d1
+            next = 0x127fcU;
+            r.data[1] = static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::int16_t>(r.data[1])));
+            m.logic(r.data[1], 32U);
+            break;
+        }
+        case 0x127fcU: { // e981 asl.l #$4, d1
+            next = 0x127feU;
+            auto value = r.data[1];
+            bool carry = false;
+            bool overflow = false;
+            for (unsigned step = 0U; step != 4U; ++step) {
+                const auto before = value;
+                carry = (before & 0x80000000U) != 0U;
+                value <<= 1U;
+                overflow = overflow || ((before ^ value) & 0x80000000U) != 0U;
+            }
+            r.data[1] = value;
+            m.logic(value, 32U);
+            r.status = static_cast<std::uint16_t>((r.status & ~0x13U) | (carry ? 0x11U : 0U) | (overflow ? 2U : 0U));
+            break;
+        }
+        case 0x127feU: { // d3ad001a add.l d1, $1a(a5)
+            next = 0x12802U;
+            const auto source_value = r.data[1];
+            const auto destination_address = r.address[5] + 0x1aU;
+            const auto destination_value = m.lng(destination_address);
+            const auto value = m.add(destination_value, source_value, 32U);
+            m.word(destination_address + 2U, value);
+            m.word(destination_address, (value) >> 16U);
+            break;
+        }
+        case 0x12802U: { // 70fc moveq #$fc, d0
+            next = 0x12804U;
+            r.data[0] = 0xfffffffcU;
+            m.logic(r.data[0], 32U);
+            break;
+        }
+        case 0x12804U: { // 4a6d0048 tst.w $48(a5)
+            next = 0x12808U;
+            const auto destination_address = r.address[5] + 0x48U;
+            const auto value = m.word(destination_address);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12808U: { // 6a02 bpl.b $1280c
+            next = 0x1280aU;
+            if ((r.status & 8U) == 0U) { next = 0x1280cU; transfer_kind = 1U; }
+            break;
+        }
+        case 0x1280aU: { // 4440 neg.w d0
+            next = 0x1280cU;
+            const auto old = r.data[0];
+            const auto value = m.sub(0U, old, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x1280cU: { // d02d003d add.b $3d(a5), d0
+            next = 0x12810U;
+            const auto source_address = r.address[5] + 0x3dU;
+            const auto source_value = m.byte(source_address);
+            const auto destination_value = r.data[0];
+            const auto value = m.add(destination_value, source_value, 8U);
+            m.db(0U, value);
+            break;
+        }
+        case 0x12810U: { // 0240001c andi.w #$1c, d0
+            next = 0x12814U;
+            const auto source_value = 0x1cU;
+            const auto destination_value = r.data[0];
+            const auto value = destination_value & source_value;
+            m.logic(value, 16U);
+            m.dw(0U, value);
+            break;
+        }
+        case 0x12814U: { // 1b40003d move.b d0, $3d(a5)
+            next = 0x12818U;
+            const auto value = r.data[0];
+            const auto destination_address = r.address[5] + 0x3dU;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x12818U: { // 41fa0dd0 lea.l $135ea(pc), a0
+            next = 0x1281cU;
+            const auto source_address = 0x135eaU;
+            r.address[0] = source_address;
+            break;
+        }
+        case 0x1281cU: { // 3b7000000006 move.w (a0, d0.w), $6(a5)
+            next = 0x12822U;
+            const auto source_address = r.address[0] + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.word(source_address);
+            const auto destination_address = r.address[5] + 0x6U;
+            m.word(destination_address, value);
+            m.logic(value, 16U);
+            break;
+        }
+        case 0x12822U: { // 1b7000020001 move.b $2(a0, d0.w), $1(a5)
+            next = 0x12828U;
+            const auto source_address = r.address[0] + 0x2U + static_cast<std::int16_t>(r.data[0]);
+            const auto value = m.byte(source_address);
+            const auto destination_address = r.address[5] + 0x1U;
+            m.byte(destination_address, value);
+            m.logic(value, 8U);
+            break;
+        }
+        case 0x12828U: { // 4eb900015d24 jsr $15d24.l
+            next = 0x1282eU;
+            const auto result = m.call(c, 280U, 0x12828U, 0x15d24U, 0x1282eU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1282eU: { // 4eb900015d3c jsr $15d3c.l
+            next = 0x12834U;
+            const auto result = m.call(c, 281U, 0x1282eU, 0x15d3cU, 0x12834U);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x12834U: { // 4eb900015df2 jsr $15df2.l
+            next = 0x1283aU;
+            const auto result = m.call(c, 282U, 0x12834U, 0x15df2U, 0x1283aU);
+            if (result.status != TranslationStatus::complete || result.control != 1U) return result;
+            next = r.program_counter;
+            break;
+        }
+        case 0x1283aU: { // 4e75 rts
+            next = 0x1283cU;
+            const auto result = m.ret();
+            if (auto event = m.interrupt(c, 0x1283aU, r.program_counter)) return *event;
+            return result;
+            break;
+        }
+        default: return {TranslationStatus::contract_violation, 0U, pc};
+        }
+        if (m.unresolved_bus) return {TranslationStatus::contract_violation, 0U, pc};
+        r.program_counter = next;
+        if (auto event = m.interrupt(c, pc, next)) return *event;
+        switch (next) {
+        case 0x12742U:
+        case 0x12746U:
+        case 0x1274aU:
+        case 0x1274eU:
+        case 0x12752U:
+        case 0x12756U:
+        case 0x12758U:
+        case 0x1275cU:
+        case 0x12760U:
+        case 0x12764U:
+        case 0x12768U:
+        case 0x1276cU:
+        case 0x12770U:
+        case 0x12774U:
+        case 0x12778U:
+        case 0x1277cU:
+        case 0x12780U:
+        case 0x12786U:
+        case 0x1278cU:
+        case 0x1278eU:
+        case 0x12792U:
+        case 0x12794U:
+        case 0x1279aU:
+        case 0x127a0U:
+        case 0x127a4U:
+        case 0x127a6U:
+        case 0x127aaU:
+        case 0x127acU:
+        case 0x127b0U:
+        case 0x127b4U:
+        case 0x127b6U:
+        case 0x127b8U:
+        case 0x127baU:
+        case 0x127bcU:
+        case 0x127c0U:
+        case 0x127c4U:
+        case 0x127c8U:
+        case 0x127ceU:
+        case 0x127d0U:
+        case 0x127d6U:
+        case 0x127d8U:
+        case 0x127dcU:
+        case 0x127e0U:
+        case 0x127e4U:
+        case 0x127e8U:
+        case 0x127ecU:
+        case 0x127f2U:
+        case 0x127f4U:
+        case 0x127f6U:
+        case 0x127faU:
+        case 0x127fcU:
+        case 0x127feU:
+        case 0x12802U:
+        case 0x12804U:
+        case 0x12808U:
+        case 0x1280aU:
+        case 0x1280cU:
+        case 0x12810U:
+        case 0x12814U:
+        case 0x12818U:
+        case 0x1281cU:
+        case 0x12822U:
+        case 0x12828U:
+        case 0x1282eU:
+        case 0x12834U:
+        case 0x1283aU:
             break;
         default: return m.dispatch(c, pc, next, transfer_kind, m.state);
         }
@@ -59064,8 +60956,13 @@ FunctionResult cpu_b_stage_023752(FunctionContext &c) noexcept {
 
 namespace gain_ground::stage_registry {
 static_assert(generated::kFunctions.size() <= 643U, "Migrate stage entry IDs before extending the original catalog");
-const std::array<FunctionContract, 312> kFunctions{{
+const std::array<FunctionContract, 317> kFunctions{{
     FunctionContract{954U, 1U, 0x72U, false, true, 0x123eaU, 0x123eaU, 0x1249bU, 178U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_0123ea", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_0123ea},
+    FunctionContract{955U, 1U, 0x72U, false, true, 0x1249cU, 0x1249cU, 0x12509U, 110U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_01249c", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_01249c},
+    FunctionContract{956U, 1U, 0x72U, false, true, 0x12598U, 0x12598U, 0x12649U, 178U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_012598", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_012598},
+    FunctionContract{957U, 1U, 0x72U, false, true, 0x1264aU, 0x12610U, 0x126afU, 160U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_01264a", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_01264a},
+    FunctionContract{958U, 1U, 0x72U, false, true, 0x12742U, 0x12742U, 0x1283bU, 250U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_012742", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_012742},
+    FunctionContract{959U, 1U, 0x72U, false, true, 0x12ad2U, 0x12ad2U, 0x12b31U, 96U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_012ad2", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_012ad2},
     FunctionContract{643U, 1U, 0x72U, false, true, 0x13e38U, 0x13e38U, 0x13e8bU, 70U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_013e38", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_013e38},
     FunctionContract{865U, 1U, 0x72U, false, true, 0x13e8cU, 0x13e8cU, 0x13eb1U, 12U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_013e8c", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_013e8c},
     FunctionContract{866U, 1U, 0x72U, false, true, 0x143f8U, 0x143f8U, 0x1442dU, 54U, 0U, 0U, "cpu-b", "72", "unverified", "retained-stage-table-and-opcodes", "implementation-first", "implemented-but-unverified", "cpu_b_stage_0143f8", "native/generated/gground_stage_callbacks.cpp", &translated::cpu_b_stage_0143f8},
