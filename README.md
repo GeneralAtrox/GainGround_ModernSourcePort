@@ -11,7 +11,7 @@ Removing game data is not legal clearance of the translated code. See
 ## Improvements
 - New pathfinding model stops characters getting stuck on each other, on geometry and on their restricted play area.
 - Added ability to change white noise title screen music
-- Steady foreground transparency replaces alternate-frame wall flicker.
+- Steady foreground drawing replaces alternate-frame wall flicker while keeping characters opaque.
 - Player 1 keyboard controls use WASD/Q/E/F, with an optional unlimited-credits mode.
 - Fixed secondary-attack projectile crashes affecting five character IDs.
 

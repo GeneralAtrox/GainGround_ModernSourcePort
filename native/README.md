@@ -78,7 +78,7 @@ enabling both toggles. The native IRQ implementation preserves those operations.
 This identifies the priority-alternation effect, not a confirmed translation
 defect or full original-machine parity.
 
-The subsequent user-authorized modernization replaces this effect with steady
+The first user-authorized modernization replaced this effect with steady
 50% transparency. The renderer composes both priority orders from the same
 current scene and blends their RGB results. It uses no previous-frame images,
 so moving objects leave no trails. Unaffected pixels retain their exact colors;
@@ -112,3 +112,28 @@ and captures remain; cleanup was not retried.
 The same review rejected the guarded removal of the subsequent replay directory
 `.tmp/modern-transparency-20260927` as "blocked by policy". Its replay executable
 and comparison frames also remain; no alternate removal was attempted.
+
+### Opaque archer correction
+
+The user then reported that revision 2's blending made an inner rampart archer
+look transparent. That was a defect in the modernization: averaging the two
+compositions faded the character wherever the wall had covered it.
+
+The current renderer instead keeps the revealing priority phase for the two
+alternating foreground categories. It renders once, with no RGB averaging, so
+characters remain fully opaque. The effect-enable flag and its per-category
+selection still apply; other foreground priorities and game RAM are unchanged.
+This intentionally replaces the old visibility effect rather than reproducing
+original-machine presentation.
+
+The updated regression passes for both modes, phase stability, fully opaque
+characters, unrelated foreground occlusion, motion, unchanged mixer RAM and
+blanking. All 57 retained Stage 6 scenes were re-rendered: the affected crop
+changes only at the four animation updates, and all 28 original revealing-phase
+crops match exactly. Visual inspection confirms the faded upper body is gone.
+Rendering averaged 3.41 ms/frame in this bounded replay. Release build passed.
+
+The corrected local package is `run/opaque-archers-20260927`; `launch.bat` also
+builds this correction. It is included in GitHub release `build-2026-09-27-r3`.
+Validation reused the existing temporary directories whose cleanup was already
+rejected; those removals were not retried.

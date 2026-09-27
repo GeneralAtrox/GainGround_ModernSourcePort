@@ -51,7 +51,7 @@ int main() { try {
         check(pixel(video, 2, 2) == 0x0000ff, "disabled effect must retain sprite priority");
         word(host, 2, 0xd0e, layer == 0 ? 0x8000 : 0x8100);
         video.render(host);
-        check(pixel(video, 2, 2) == 0x7f007f, "foreground/sprite overlap must use 50% transparency");
+        check(pixel(video, 2, 2) == 0x0000ff, "foreground effect must keep the character fully opaque");
         const auto low = video.pixels();
         if (layer == 0) word(host, 10, 2, 5);
         word(host, 10, 6, 3);
@@ -64,9 +64,19 @@ int main() { try {
         check(pixel(video, 2, 2) == 0xff0000, "moving sprite must leave no trail");
         check(pixel(video, 18, 2) == 0x0000ff, "unoccluded sprite must stay fully opaque");
     }
+    scene(host, 0);
+    word(host, 2, 0xd0e, 0x8100);
+    video.render(host);
+    check(pixel(video, 2, 2) == 0xff0000, "mode 0x81 must leave the first foreground priority alone");
+    word(host, 2, 0xd0e, 0x8000);
+    word(host, 5, 2 * 8192, 0x8001);
+    word(host, 6, 0x200c, 0);
+    word(host, 10, 10, 7);
+    video.render(host);
+    check(pixel(video, 2, 2) == 0xff0000, "nonalternating foreground must still occlude the character");
     word(host, 10, 26, 1);
     video.render(host);
     for (const auto rgb : video.pixels()) check(rgb == 0, "blanking must remain black");
-    std::cout << "Transparency: both effect modes, phase invariance, opaque pixels, motion, RAM and blanking passed\n";
+    std::cout << "Foreground visibility: both modes, phase invariance, opaque characters, other occlusion, motion, RAM and blanking passed\n";
     return 0;
 } catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; } }

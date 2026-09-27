@@ -252,3 +252,18 @@ and re-rendering 57 captured Stage 6 scenes. The latter removes all alternate-fr
 upper-body disappearance, retaining the four normal animation transitions.
 No full-game or exact-parity claim is made. ROMs and private captures are excluded
 from both the source commit and release package.
+
+## Windows release revision 3 — 2026-09-27
+
+Release `build-2026-09-27-r3` corrects the faded archer introduced by revision 2.
+The renderer holds the revealing foreground-priority phase instead of averaging
+two compositions. Characters remain opaque and steady; unrelated foreground
+occlusion still applies. All earlier controls and projectile crash fixes remain.
+
+The packaged Release executable SHA-256 is
+`f0d500e60344ae4afa2c9452564023f17b0080a66bc36693f605294e8c946b0e`.
+The updated focused renderer test passes. Re-rendering 57 Stage 6 scenes leaves
+only the four normal animation changes; all 28 original revealing-phase
+upper-body crops match exactly. This is bounded validation, not full-game parity.
+The release ZIP includes the executable, required DLLs, notices and source-commit
+manifest. No ROMs or private captures are included.

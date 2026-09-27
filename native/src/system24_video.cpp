@@ -54,8 +54,17 @@ void System24Video::render(const RuntimeHost &host)
     tile.insert(tile.end(), masks.begin(), masks.end());
     const auto chars = host.region_bytes(8);
     const auto palette = host.region_bytes(9);
-    const auto mixer = words(host.region_bytes(10));
+    auto mixer = words(host.region_bytes(10));
     if (mixer[13] & 1U) { std::fill(pixels_.begin(), pixels_.end(), 0U); return; }
+    const auto effect = host.region_bytes(2)[0xd0eU];
+    // Keep the revealing phase of the old foreground-priority effect. Blending
+    // its two orders faded characters behind the wall. Only the two alternating
+    // categories are normalized; other occlusion and game RAM stay unchanged.
+    if (effect & 0x80U) {
+        mixer[3] = std::min(mixer[3], static_cast<std::uint16_t>(mixer[3] ^ 1U));
+        if (!(effect & 1U))
+            mixer[1] = std::min(mixer[1], static_cast<std::uint16_t>(mixer[1] ^ 7U));
+    }
     auto sprites = words(host.region_bytes(11));
     const auto compose = [&](const auto &priorities) {
         bitmap_ind16 bitmap;
@@ -105,28 +114,11 @@ void System24Video::render(const RuntimeHost &host)
         return bitmap;
     };
     const auto bitmap = compose(mixer);
-    const auto ram = host.region_bytes(2);
-    const auto effect = ram[0xd0eU];
-    // IRQ5 alternates foreground priorities to simulate translucency. Compose
-    // both orders from this SAME scene and blend them instead: no frame history,
-    // motion trails, game-state writes or stage-specific archer exceptions.
-    std::vector<std::uint16_t> other;
-    if (effect & 0x80U) {
-        auto alternate = mixer;
-        alternate[3] ^= 1U;
-        if (!(effect & 1U)) alternate[1] ^= 7U;
-        other = compose(alternate).data;
-    }
     std::array<std::uint32_t,16384> colors{};
     for (std::size_t i = 0; i < colors.size(); ++i) colors[i] = color(word(palette, (i & 8191) * 2U), (i & 8192) != 0);
     for (int y = 0; y < 384; ++y) for (int x = 0; x < 496; ++x) {
         const auto index = std::size_t(y) * 496 + x;
-        auto rgb = colors[bitmap.data[index] & 16383U];
-        if (!other.empty()) {
-            const auto second = colors[other[index] & 16383U];
-            // Per-channel 50% opacity, retaining unchanged pixels exactly.
-            rgb = (rgb & second) + (((rgb ^ second) & 0xfefefeU) >> 1U);
-        }
+        const auto rgb = colors[bitmap.data[index] & 16383U];
         pixels_[std::size_t(495 - x) * 384 + y] = rgb;
     }
 }
