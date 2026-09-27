@@ -2,9 +2,27 @@
 #include "gain_ground/gameplay/game_definitions.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 namespace gain_ground::gameplay {
 namespace {
+// Opt-in diagnostics: GAIN_GROUND_NAV_LOG=<path> appends one line whenever the
+// adapter stands aside or holds an actor, sampled every 30 frames per actor.
+std::FILE *nav_log(){
+    static std::FILE *file=[]{const char *path=std::getenv("GAIN_GROUND_NAV_LOG");return path && *path ? std::fopen(path,"a"):nullptr;}();
+    return file;
+}
+void log_actor(const char *why,std::span<const std::uint8_t> r,unsigned a,std::uint64_t frame,
+               double goal_x,double goal_y,const char *extra=""){
+    auto *file=nav_log();if(!file || frame%30)return;
+    const auto n=[&](unsigned o){return (unsigned(r[a+o])<<24)|(unsigned(r[a+o+1])<<16)|(unsigned(r[a+o+2])<<8)|r[a+o+3];};
+    const auto fx=[&](unsigned o){return static_cast<std::int32_t>(n(o))/65536.0;};
+    std::fprintf(file,"frame %llu %s record %05x callback %06x descriptor %06x pos %.1f,%.1f intent %.2f,%.2f target %u goal %.0f,%.0f +40 %02x +41 %02x +59 %02x +5c %04x%s\n",
+        static_cast<unsigned long long>(frame),why,a,n(2),n(0x6e),fx(0x12),fx(0x1a),fx(0x1e),fx(0x26),unsigned(r[a+0x60]),goal_x,goal_y,
+        unsigned(r[a+0x40]),unsigned(r[a+0x41]),unsigned(r[a+0x59]),(unsigned(r[a+0x5c])<<8)|r[a+0x5d],extra);
+    std::fflush(file);
+}
 unsigned word(std::span<const std::uint8_t> r,unsigned a){return a+1<r.size() ? (unsigned(r[a])<<8)|r[a+1]:0;}
 std::uint32_t number(std::span<const std::uint8_t> r,unsigned a){return (word(r,a)<<16)|word(r,a+2);}
 double fixed(std::span<const std::uint8_t> r,unsigned a){return static_cast<std::int32_t>(number(r,a))/65536.0;}
@@ -54,19 +72,22 @@ public:
         if(left>right || bottom>top)return goal;
         return {std::clamp(goal.x,left,right),std::clamp(goal.y,bottom,top)};
     }
+    // The mover's footprint lies within its movement rectangle, and F355's
+    // four attribute probes at (x,y), (x,y+18), (x+20,y+18), (x+20,y) all
+    // fall on screen. Terrain content and scenery are judged separately.
+    bool inside(NavigationPoint p) const {
+        const int x=int(std::floor(p.x)),y=int(std::floor(p.y));
+        return valid && x-10>=bounds[0] && x+10<bounds[1] && y-9>=bounds[2] && y+9<=bounds[3] &&
+            x>=10 && x+20<=383 && y>=9 && y+18<=495;
+    }
     bool walkable(NavigationPoint p) const override {
-        const int left=int(std::floor(p.x))-10,right=int(std::floor(p.x))+10;
-        const int bottom=int(std::floor(p.y))-9,top=int(std::floor(p.y))+9;
-        if(!valid || left<bounds[0] || right>=bounds[1] || bottom<bounds[2] || top>bounds[3] ||
-            left<0 || right>383 || bottom<0 || top>495)return false;
+        if(!inside(p))return false;
         // F355's bounds are centered, but its four attribute probes begin at
         // (x,y), then add (0,18), (20,18), (20,0). F287 preserves those inputs.
         // Using centered corners here approves steps that F355 then rejects.
         for(int x:{int(std::floor(p.x)),int(std::floor(p.x))+20})
-            for(int y:{int(std::floor(p.y)),int(std::floor(p.y))+18}){
-                if(x<0 || x>383 || y<0 || y>495)return false;
+            for(int y:{int(std::floor(p.y)),int(std::floor(p.y))+18})
                 if(shared[0x3af22+(x/8)*64+(495-y)/8]&9)return false;
-            }
         // Scenery never yields. Exclude its footprint from A* and line-of-sight
         // queries as well as local steps, using the same contact clearance.
         for(const auto &solid:solids)
@@ -121,7 +142,8 @@ void LegacyEnemyNavigation::prepare(std::span<std::uint8_t> r,std::span<const st
     }
     if(goal.x<0 || goal.x>383 || goal.y<0 || goal.y>495){slot.facing_samples=0;return;}
     // Preserve the original patrol-arrival stop even if contact preceded it.
-    if(!target && std::abs(goal.x-mover.position.x)<=8 && std::abs(goal.y-mover.position.y)<=8){slot.contact_blocked=false;slot.facing_samples=0;return;}
+    // The step dispatcher accepts arrival within 10 pixels on each axis.
+    if(!target && std::abs(goal.x-mover.position.x)<=10 && std::abs(goal.y-mover.position.y)<=10){slot.contact_blocked=false;slot.facing_samples=0;return;}
     std::vector<NavigationReservation> claims;
     for(unsigned i=0;i<slots_.size();++i){
         const unsigned other=0x3400+i*128;const auto &owner=slots_[i];
@@ -130,11 +152,21 @@ void LegacyEnemyNavigation::prepare(std::span<std::uint8_t> r,std::span<const st
             claims.push_back({other,owner.state.waiting_position});
     }
     World world(r,shared,record,claims);if(!world.valid){slot.facing_samples=0;return;}
+    // An actor entering from outside the screen or its movement rectangle has
+    // no legal navigation step until its footprint is inside. Leave the
+    // original walking intent for F355/F357, which admit it as before.
+    if(!world.inside(mover.position)){slot.facing_samples=0;log_actor("outside-rectangle",r,record,frame,goal.x,goal.y);return;}
+    // A scripted route point outside the permitted rectangle is not a player
+    // to wait for at the edge. Waiting there would zero the intent forever and
+    // the original step dispatcher would never see arrival. Leave it alone.
+    if(!target && !world.inside(goal)){slot.facing_samples=0;slot.state.waiting_assigned=false;log_actor("edge-route-point",r,record,frame,goal.x,goal.y);return;}
     const auto delta=EnemyNavigation{}.steer(slot.state,world,mover,goal,intended);
     // Preserve intent across a one-pass wait; animation follows committed
     // displacement, not the retained speed used to resume on the next update.
     if(delta.x==0 && delta.y==0){
         slot.facing_samples=0;
+        log_actor(slot.state.waiting ? "boundary-wait":"no-legal-step",r,record,frame,goal.x,goal.y,
+                  slot.state.route.empty() ? " route 0":" route >0");
         {
             // Suppress only this movement pass. Restore intent after F357 so
             // waiting does not turn into a permanent zero-speed enemy.

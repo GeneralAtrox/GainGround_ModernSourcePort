@@ -37,9 +37,43 @@ FunctionResult cpu_b_initialize_descriptor_slots(FunctionContext&context) noexce
         clr_byte(h,r,r.address[6]+0x3fU);clr_word(h,r,r.address[6]+0x42U);clr_word(h,r,r.address[6]+0x44U);
         h.write_memory_word(kPrivate,r.address[6]+0x46U,0x8000U,kMask);logic(r,0x8000U,0x8000U,0xffffU);
         r.address[1]=rl(h,r.address[0]);r.address[0]+=4U;
-        if(r.address[1]!=0x00013eb2U)return{TranslationStatus::contract_violation,0U,r.address[1]};
-        push(h,r,0x00013e82U);r.program_counter=r.address[1];
-        const auto child=h.call_function(278U,1U,0x72U,2U,0x00013e80U,r.address[1],context);
+        // The list names one of the slot initializer's entry points. Entries
+        // ahead of the shared body preload record fields from the list, then
+        // the common tail at 13EAE copies the callback (13E8C..13EB1):
+        //   13E8C move.w #8,$46(a6)                        bra.s 13EAE
+        //   13E94 move.w (a0)+,$10(a6); move.w (a0)+,$20(a6) bra.s 13EAE
+        //   13E9E move.w #$14,$46(a6)
+        //   13EA4 move.w (a0)+,$20(a6)                       bra.s 13EAE
+        //   13EAA move.w (a0)+,$22(a6)
+        //   13EAE move.l (a0)+,$2(a6)
+        //   13EB2 shared body (F278). Entered directly, +2 keeps 15DF2 above.
+        // Three more enter the field copier (F279) without the bounds copy:
+        //   13EC4 move.w (a0)+,$20(a6)
+        //   13EC8 move.l (a0)+,$2(a6)
+        //   13ECC field copier (F279), rts.
+        const auto entry=r.address[1];
+        const bool via_tail=entry==0x00013e8cU||entry==0x00013e94U||entry==0x00013e9eU||entry==0x00013ea4U||entry==0x00013eaaU||entry==0x00013eaeU;
+        const bool via_copier=entry==0x00013ec4U||entry==0x00013ec8U||entry==0x00013eccU;
+        if(!via_tail&&!via_copier&&entry!=0x00013eb2U)
+            return{TranslationStatus::contract_violation,0U,entry};
+        push(h,r,0x00013e82U);r.program_counter=entry;
+        const auto move_list_word=[&](std::uint32_t d){const auto v=h.read_memory_word(kPrivate,r.address[0],kMask);r.address[0]+=2U;h.write_memory_word(kPrivate,d,v,kMask);logic(r,v,0x8000U,0xffffU);};
+        const auto move_list_long=[&](std::uint32_t d){const auto v=rl(h,r.address[0]);r.address[0]+=4U;wl(h,d,v);logic(r,v,0x80000000U,0xffffffffU);};
+        const auto move_word=[&](std::uint32_t d,std::uint16_t v){h.write_memory_word(kPrivate,d,v,kMask);logic(r,v,0x8000U,0xffffU);};
+        switch(entry){
+        case 0x00013e8cU:move_word(r.address[6]+0x46U,0x0008U);break;
+        case 0x00013e94U:move_list_word(r.address[6]+0x10U);move_list_word(r.address[6]+0x20U);break;
+        case 0x00013e9eU:move_word(r.address[6]+0x46U,0x0014U);move_list_word(r.address[6]+0x20U);break;
+        case 0x00013ea4U:move_list_word(r.address[6]+0x20U);break;
+        case 0x00013eaaU:move_list_word(r.address[6]+0x22U);break;
+        case 0x00013ec4U:move_list_word(r.address[6]+0x20U);move_list_long(r.address[6]+2U);break;
+        case 0x00013ec8U:move_list_long(r.address[6]+2U);break;
+        default:break;
+        }
+        if(via_tail)move_list_long(r.address[6]+2U);
+        const std::uint32_t target=via_copier ? 0x00013eccU:0x00013eb2U;
+        r.program_counter=target;
+        const auto child=h.call_function(via_copier ? 279U:278U,1U,0x72U,2U,0x00013e80U,target,context);
         if(child.status!=TranslationStatus::complete||child.control!=1U)return child;
         r.address[6]=static_cast<std::uint32_t>(static_cast<std::int64_t>(r.address[6])+0x80);
         d7=static_cast<std::uint16_t>(d7-1U);r.data[7]=(r.data[7]&0xffff0000U)|d7;

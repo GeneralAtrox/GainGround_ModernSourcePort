@@ -61,12 +61,38 @@ Three players share the stage. Keyboard controls player 1; Xbox controllers 1-3
 control the matching slots. Press **P** or use the Pause menu to pause; the title
 changes to **Gain Ground - Paused**.
 
+The **Stage** menu jumps to a chosen stage (Round 1-4, Stage 1-10). During play
+the current stage ends at once through the game's own stage-clear sequence and
+the chosen stage loads with its round's graphics bank. Chosen at the title, it
+applies on the first frame of the next game. The title bar shows the pending
+choice until it applies. It applies once, and the attract demo is unaffected.
+Pick **Continue normally** to withdraw the choice before it applies.
+
 The default icon is Windows' application icon. Optional user-provided
 `%LOCALAPPDATA%\GainGround\game.ico` replaces it. Optional
 `%LOCALAPPDATA%\GainGround\title_music.pcm` replaces the title cue once, without
 looping. Its format is raw signed 16-bit little-endian stereo PCM at 62,500 Hz,
 at most 64 MiB. Neither file is shipped. Without a replacement, audio comes
 from the original ROM-driven synthesis.
+
+## Performance
+
+`GAIN_GROUND_SAMPLE=<path>` starts an in-process statistical sampler of the
+runtime thread; on exit it writes a histogram that
+`scripts/Resolve-Samples.py build/gain_ground_runtime.exe <path>` ranks by
+function (build with `-g` for symbols; samples in system DLLs are attributed
+by module and export). `GAIN_GROUND_NAV_LOG` adds a `progress` line every 600
+frames with the execution checkpoint count, which must not change when only
+host code changes.
+
+Measured on this basis: rendering and painting every emulated frame were the
+largest host costs and are now limited to display rate above real speed. The
+remaining cost is structural: the two CPUs are cycle-timed and interleaved
+through fiber switches, about eleven million per emulated second, so the
+exact original ordering leaves little to remove without a cheaper context
+switch. `GAIN_GROUND_DIRECT_WAIT=0` disables the in-place device-clock step
+that a waiting CPU may take when the other cannot run first; it changes no
+guest behaviour either way.
 
 ## Source and checks
 
@@ -81,3 +107,37 @@ To check extraction with your own set:
 python scripts/Test-RomImport.py build/gain_ground_rom_import.exe C:\my-roms\gground
 python scripts/Audit-SourcePackage.py
 ```
+
+To drive the built game through every stage with the Stage menu, spawning a
+character and playing a few seconds on each, and report which stages load and
+run without a runtime stop:
+
+```powershell
+.\scripts\Test-StageSelect.ps1 -From 0 -To 39
+```
+
+Add `-Sweep` for the exhaustive variant: the game runs as fast as the host
+allows with an invulnerable player, and on each stage the runtime moves player 1
+to every 8-pixel grid cell whose footprint the terrain probes accept, a few
+frames apart (`-SweepFrames`), so the character's update, contacts and the
+enemies' reactions run from every reachable position. The sweep holds the
+stage's time-up byte, skips cells with any terrain attribute, and by default
+stays below the exit strip at the top of the field, because the original ends a
+player who reaches the exit with an empty roster. The test aids behind it are
+environment variables read at startup and otherwise inert:
+`GAIN_GROUND_TEST_SPEED` (audio is dropped above 1; the current emulation
+sustains about 1.4x on one core), `GAIN_GROUND_INVULNERABLE` (hits are ignored
+without marking the attacker), `GAIN_GROUND_SWEEP_FRAMES`,
+`GAIN_GROUND_SWEEP_BOUNDS=x0,x1,y0,y1`, and the sweep window commands the
+script posts.
+
+It needs the imported ROM cache and the MSYS2 runtime DLLs, takes about ten
+seconds per stage plus the play time, and restarts the game after a runtime stop
+so the remaining stages are still covered. The per-stage fault summaries name the
+untranslated routine when a stage's objects or enemies reach code no captured
+run executed. Such a routine is translated with
+`scripts/Generate-GapTranslations.py`, which reads the privately retained
+CPU-B opcode bank, follows the routine's control flow and unregistered callees,
+and regenerates `native/src/translated/cpu_b_stage_gap_callbacks.cpp` with its
+registry header. Its output is implementation-first translation, not fixture
+evidence.

@@ -78,6 +78,8 @@ public:
     virtual std::uint16_t enemy_walking_advance(std::uint32_t, std::uint16_t original) const { return original; }
     // Live attack contexts may select the authored mode without changing movement RAM.
     virtual std::uint8_t enemy_direction_mode(std::uint32_t, std::uint8_t original) const { return original; }
+    // Test aid: player characters ignore hits, as during the post-spawn grace timer.
+    virtual bool player_invulnerable() const noexcept { return false; }
     // Definition word offset is +6 (movement), +8 (primary), or +A (secondary).
     virtual std::uint16_t character_profile(std::uint32_t, unsigned,
                                            std::uint16_t original) const noexcept {

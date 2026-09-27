@@ -1,4 +1,4 @@
-# Source-only packaging audit — 2026-09-13
+# Source-only packaging audit - 2026-09-13
 
 This package contains native implementation source, address/hash/timing metadata,
 source-only tests, build/import tools and third-party notices. It excludes ROMs,
@@ -35,6 +35,55 @@ callback translation (59,386 lines); stripping assets does not modularize it.
   it attempted YM writes without releasing reset. Its setup now releases the
   documented I/O reset line before checking busy status. Runtime code was unchanged.
 
+## Original-behavior acceptance
+
+The 26 September 2026 private acceptance baseline passes 33 of 34 research
+tests. A subsequent [fixture-host repair](fixture-loop-comparator-repair-20260926.md)
+passes 35 of 36 tests, including all 16 real-child tests; complete graphics,
+audio, timing and scenario/fixture parity remains unproved. The native
+visual-writer trace reconstructs all 805 observed renders,
+but exposes missed title-frame timing and cleared visible BIOS palette entries.
+The source audit resolves all 15 declared original source identities and maps
+44 selected-stage contract fields; its complete-coverage gate still fails.
+The presentation audit adds 30 dispositions and verifies composition of all 13
+captured review frames, while retaining the stored top-byte mismatch separately
+from RGB display equivalence.
+A subsequent [fixture census](fixture-census-investigation-20260926.md) attempts
+all 95,169 eligible records: 95,168 comparisons return and one times out.
+The 35,387 passes and 59,781 divergences explicitly include 31,971 records run
+with a temporary fixture-host loop correction; this is not a production-suite
+pass. The integrated correction reproduces all 31,971 affected results. Game
+functions, RuntimeHost behavior and compatibility rules remained unchanged in
+that loop repair. The later [input-sampling repair](input-sampling-repair-20260926.md)
+passes **37/38** research tests, including all **17** real-child tests. It fixes
+the live I/O read upper byte and integrates the evidenced F119/F120 fixture
+boundary. The affected 31,971 comparisons retain all previous passes and add
+94 passes. Translated functions and compatibility rules are unchanged; complete
+parity and the remaining acceptance gates are still open.
+See the [current acceptance baseline](acceptance-baseline-20260926.md) and
+[presentation audit](presentation-contract-audit-20260926.md). Source-only build
+success and function-body coverage do not establish original-behavior parity.
+
+The subsequent F498 fixture investigation verifies a separate current capture
+executable against all 641 function descriptors, 748 base ranges and 41 body
+extensions. Historical capture executable and manifest identities are unchanged.
+Thirteen new secondary-selector captures pass source integrity, pre-entry
+intervention, original branch and enclosing-return checks. One F498 record per
+capture is admitted as controlled path evidence; 78 repeated records are excluded.
+F498 now has 97 observed instruction entries and 77 missing control outcomes,
+with two secondary targets and the exception/ownership gaps still open. This
+grants no native replay admission or natural-reachability claim. See
+[the fixture investigation](function103-lock-lifetime-20260926.md). Graphics,
+matched audio, timing and comprehensive scenario acceptance remain open.
+The complete MCP suite passed **97/97** after correcting stale catalog/path
+expectations and an audit that omitted 17 already-proven body ranges. The audit
+retains exact owner/range equality across all 41 extensions; unresolved producer
+contracts still block readiness. These are tooling checks, not native-game parity.
+The selector12 follow-up also passed 97/97. Selector13 has independently verified
+indexed-byte effects, flags and an actual enclosing return. The complete MCP
+suite passes 97/97 against the final catalog; native corpus acceptance remains
+open and no native replay eligibility was added.
+
 ## Publication boundary
 
 The source-only main history replaces the old history containing game data.
@@ -56,3 +105,8 @@ Automatic approval review rejected the guarded removal of the temporary
 specific reason. It remains local and excluded from Git. No alternate deletion
 or retry was attempted. The playable build and private history backup are retained
 intentionally.
+
+The later F498 capture build and its temporary test-output log also remain local:
+automatic approval review rejected their respective guarded cleanup actions as
+"blocked by policy". No alternate deletion or parent-directory removal was
+attempted. Conclusions are retained in the fixture investigation and manifests.

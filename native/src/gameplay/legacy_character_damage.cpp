@@ -13,6 +13,10 @@ public:
           effects_{host_, registers_, 1U, 0x72U}, record_(registers_.address[5]) {}
 
     void mark_contact() override {
+        // A protected hit marks the contacting object as spent, which removes an
+        // enemy body. The test guard must not turn an invulnerable player into a
+        // touch kill, so it leaves the object alone.
+        if (host_.player_invulnerable()) return;
         const auto address = registers_.address[6] + 0x3fU;
         const auto previous = byte(address);
         byte(address, static_cast<std::uint8_t>(previous | 0x80U));
@@ -21,6 +25,7 @@ public:
     bool protected_from_hit() override {
         const auto timer = word(record_ + 0x48U);
         effects_.logic(timer, 16U);
+        if (host_.player_invulnerable()) { effects_.logic(1U, 16U); return true; }
         return static_cast<std::int16_t>(timer) > 0;
     }
     void ignore_hit() override {

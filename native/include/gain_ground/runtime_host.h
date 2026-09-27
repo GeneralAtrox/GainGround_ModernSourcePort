@@ -68,6 +68,30 @@ public:
     bool load_character_definitions(const std::filesystem::path &directory, std::string &error) {
         return character_definitions_.load(directory, error);
     }
+    // Stage select. During play the current stage is cleared at once through
+    // the original all-enemies-defeated clear, which then advances to original
+    // stage index 0..39 (round*10 + stage) instead of the following stage; -1
+    // clears the request. Outside play the request waits for the next game.
+    void set_start_stage(int stage_index) noexcept {
+        start_stage_ = stage_index; start_stage_publish_ = false; start_stage_force_ = stage_index >= 0;
+    }
+    [[nodiscard]] int start_stage() const noexcept { return start_stage_; }
+    [[nodiscard]] bool take_start_stage_applied() noexcept {
+        const auto applied = start_stage_applied_; start_stage_applied_ = false; return applied;
+    }
+    // Test aids. Player records are learned from the character update entry;
+    // teleport writes a player's 16.16 position, leaving every other field to
+    // the original movement, contact and terrain code.
+    void set_player_invulnerable(bool on) noexcept { invulnerable_ = on; }
+    bool player_invulnerable() const noexcept override { return invulnerable_; }
+    [[nodiscard]] std::uint32_t player_record(unsigned player) const noexcept {
+        return player < player_records_.size() ? player_records_[player] : 0U;
+    }
+    bool teleport_player(unsigned player, int x, int y);
+    // The two stage-select decisions, taken on CPU B's own writes and frames.
+    // Public so tests can exercise them without running the stage teardown.
+    std::uint16_t stage_select_write(std::uint16_t region, std::uint32_t offset, std::uint16_t value, std::uint32_t pc);
+    bool stage_select_frame(std::uint32_t record);
     std::uint64_t execution_time_ns() const noexcept override;
     void wait_until_time(std::uint64_t deadline_ns) override;
     void begin_timed_execution() noexcept override { ++timed_depth_[selected_cpu_]; }
@@ -90,6 +114,15 @@ public:
     [[nodiscard]] const RuntimeFault &fault() const noexcept { return fault_; }
     [[nodiscard]] bool faulted() const noexcept { return !fault_.message.empty(); }
     [[nodiscard]] std::uint64_t execution_checkpoints() const noexcept { return operations_; }
+    // Operations since the scheduler last (re)entered a CPU. The scheduler
+    // yields a CPU after 4096; an in-place wait step counts as a re-entry so
+    // the yield points stay where a real switch would have put them.
+    [[nodiscard]] std::uint64_t operations_since_switch() const noexcept { return operations_since_switch_; }
+    void reset_yield_window() noexcept { operations_since_switch_ = 0U; }
+    // The window scheduler steps the device clock to the next event or CPU
+    // deadline and switches back; a waiting CPU may take that step in place
+    // when the other CPU cannot run first. Only that scheduler enables it.
+    void set_direct_wait(bool on) noexcept { direct_wait_ = on; }
     [[nodiscard]] const FunctionContext *active_context() const noexcept { return active_; }
     // IRQ lines are driven explicitly by device models, never by host wall time.
     void set_irq_line(std::uint8_t cpu, std::uint8_t level, bool asserted) noexcept;
@@ -128,6 +161,12 @@ private:
     // Session lifetime only; a fresh host lets the original code select defaults.
     std::array<std::uint8_t, 0x4c> saved_settings_{};
     bool has_saved_settings_{};
+    int start_stage_{-1};
+    bool start_stage_publish_{};
+    bool start_stage_force_{};
+    bool start_stage_applied_{};
+    bool invulnerable_{};
+    std::array<std::uint32_t, 4> player_records_{};
     System24Devices *devices_{};
     bool waiting_{};
     struct SuspendedExecution { FunctionContext *context{}; Invocation *invocation{}; std::size_t depth{}; bool waiting{}; };
@@ -138,6 +177,8 @@ private:
     Invocation *invocation_{};
     RuntimeFault fault_{};
     std::uint64_t operations_{};
+    std::uint64_t operations_since_switch_{};
+    bool direct_wait_{};
     std::size_t depth_{};
     Checkpoint checkpoint_{};
     void *checkpoint_argument_{};

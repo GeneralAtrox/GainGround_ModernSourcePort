@@ -92,7 +92,9 @@ std::optional<std::uint16_t> System24Devices::read(std::uint32_t address, std::u
         else if (reg < 12) value = static_cast<std::uint8_t>("SEGA"[reg - 8]);
         else if (reg == 12 || reg == 14) value = cnt_;
         else if (reg == 13 || reg == 15) value = direction_;
-        return (0xff00U | value) & mask;
+        // The original map connects this 8-bit I/O chip to the low lane;
+        // the address space's unmapped high lane reads zero.
+        return value & mask;
     }
     if (io >= 0x800100U && io <= 0x800103U) return (0xff00U | audio.read((io >> 1) & 1)) & mask;
     if (io >= 0x800040U && io <= 0x80007fU) return 0xffffU & mask; // iod_r

@@ -14,8 +14,10 @@
 #include "gain_ground/runtime_input.h"
 #include "gain_ground/system24_video.h"
 #include "gain_ground/timing_trace_session.h"
+#include "gain_ground/host_sampler.h"
 #include <array>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -29,6 +31,14 @@
 namespace {
 constexpr wchar_t kWindowClass[] = L"GainGroundNativeRuntime";
 constexpr UINT kPauseCommand = 1001U;
+// Stage menu: 4 rounds of 10 stages map to original stage index round*10 + stage.
+constexpr UINT kStageCommandBase = 2000U;
+constexpr UINT kStageCount = 40U;
+constexpr UINT kStageContinueCommand = kStageCommandBase + kStageCount;
+// Test-only commands (no menu entries): sweep player 1 across every clear
+// grid cell of the current stage, or stop such a sweep.
+constexpr UINT kSweepStartCommand = 3001U;
+constexpr UINT kSweepStopCommand = 3002U;
 constexpr char kBiosSha256[] = "a42dc284615f58ec035652f178e1bae9b1443e7468e436c578e328dd75dc93ed";
 
 using gain_ground::matches_hash;
@@ -92,10 +102,14 @@ struct RuntimeWindow {
     std::array<void *,2> cpu_fiber{};
     struct FiberArgument { RuntimeWindow *app{}; unsigned cpu{}; };
     std::array<FiberArgument,2> arguments;
-    std::uint64_t next_yield{4096U};
+    std::uint64_t fiber_switches{}; // diagnostics for the progress line
     std::array<bool,2> finished{};
     bool title_started{}, cpu_b_started{};
     std::uint64_t last_frame{UINT64_MAX};
+    // Frames are rendered at display rate: every frame at or below real speed,
+    // otherwise at most about sixty a second. Painting waits for a new render.
+    std::chrono::steady_clock::time_point last_render{};
+    bool frame_dirty{};
     std::uint64_t emulated_ns{};
     std::chrono::steady_clock::time_point epoch{std::chrono::steady_clock::now()};
     std::wstring error;
@@ -177,21 +191,173 @@ struct RuntimeWindow {
         if (paused) epoch += now - paused_at;
         else { paused_at = now; release_input(); }
         paused = !paused;
-        SetWindowTextW(window, paused ? L"Gain Ground - Paused" : L"Gain Ground");
+        update_title(window);
         ModifyMenuW(GetMenu(window), kPauseCommand, MF_BYCOMMAND | MF_STRING,
             kPauseCommand, paused ? L"&Resume (P)" : L"&Pause (P)");
         DrawMenuBar(window);
     }
 
-    ~RuntimeWindow() { for (auto fiber : cpu_fiber) if (fiber) DeleteFiber(fiber); }
+    int selected_stage{-1};
+
+    // Test aids, configured from the environment at startup:
+    //   GAIN_GROUND_TEST_SPEED   emulated seconds per wall second (audio is dropped above 1)
+    //   GAIN_GROUND_INVULNERABLE player characters ignore hits
+    //   GAIN_GROUND_NAV_LOG      diagnostic log shared with the navigation adapter
+    double speed{1.0};
+    std::FILE *diag{};
+    struct Sweep {
+        bool active{};
+        int cell{-1};
+        unsigned frames{}, teleports{}, skipped{};
+        std::uint16_t stage{};
+        static constexpr int width = 48, height = 62, step = 8;
+        unsigned frames_per_cell{8U};
+        // The top strip holds the exit zone and the time banner; stepping into the
+        // exit with an empty roster ends the player by the game's own rule.
+        int min_x{0}, max_x{383}, min_y{0}, max_y{424};
+    } sweep;
+
+    void diag_log(const char *format, auto... args)
+    {
+        if (!diag) return;
+        std::fprintf(diag, format, args...);
+        std::fputc('\n', diag);
+        std::fflush(diag);
+    }
+
+    std::uint16_t stage_index() const
+    {
+        const auto bytes = host.region_bytes(2U);
+        return bytes.size() > 0xc03U ? static_cast<std::uint16_t>((bytes[0xc02U] << 8U) | bytes[0xc03U]) : 0U;
+    }
+
+    void start_sweep()
+    {
+        const auto keep = sweep;
+        sweep = Sweep{};
+        sweep.frames_per_cell = keep.frames_per_cell;
+        sweep.min_x = keep.min_x; sweep.max_x = keep.max_x; sweep.min_y = keep.min_y; sweep.max_y = keep.max_y;
+        sweep.active = true;
+        sweep.stage = stage_index();
+        diag_log("sweep start stage %u record %05x", unsigned(sweep.stage), unsigned(host.player_record(0)));
+    }
+
+    void stop_sweep(const char *why)
+    {
+        if (!sweep.active) return;
+        sweep.active = false;
+        diag_log("sweep %s stage %u teleports %u skipped %u", why, unsigned(sweep.stage), sweep.teleports, sweep.skipped);
+    }
+
+    // F355's terrain probes at (x,y), (x,y+18), (x+20,y+18), (x+20,y) against
+    // the column-major attribute map, plus the 20x18 footprint on screen.
+    bool cell_clear(int x, int y) const
+    {
+        const auto shared = host.region_bytes(3U);
+        if (shared.size() < 0x3bb20U || x - 10 < 0 || x + 20 > 383 || y - 9 < 0 || y + 18 > 495) return false;
+        for (int px : {x, x + 20})
+            for (int py : {y, y + 18})
+                if (shared[0x3af22U + static_cast<std::size_t>(px / 8) * 64U + static_cast<std::size_t>((495 - py) / 8)] != 0U) return false; // any attribute: solid, exit, hazard
+        return true;
+    }
+
+    // Once per rendered frame while a sweep runs: every few frames move
+    // player 1 to the next clear cell, so its update, contacts and the enemies'
+    // reactions run from every position the stage offers.
+    // The stage phase machine clears the stage on time-up when the byte at
+    // 0xd2d reaches 2 (raised by the clock object as its countdown expires).
+    // Ten-times speed would expire the clock mid-sweep, so hold that byte.
+    void hold_stage_clock()
+    {
+        host.write_memory_word(2U, 0xd2cU, 0U, 0x00ffU);
+    }
+
+    void sweep_step()
+    {
+        if (host.faulted()) return;
+        // After a sweep the clock has long expired underneath; keep holding the
+        // time-up until the harness moves the game to another stage.
+        if (!sweep.active) { if (sweep.teleports && stage_index() == sweep.stage) hold_stage_clock(); return; }
+        if (stage_index() != sweep.stage) { stop_sweep("left stage during"); return; }
+        hold_stage_clock();
+        if (++sweep.frames < sweep.frames_per_cell) return;
+        sweep.frames = 0;
+        for (;;) {
+            if (++sweep.cell >= Sweep::width * Sweep::height) { stop_sweep("done"); return; }
+            const int x = (sweep.cell % Sweep::width) * Sweep::step + 4;
+            const int y = (sweep.cell / Sweep::width) * Sweep::step + 4;
+            if (x < sweep.min_x || x > sweep.max_x || y < sweep.min_y || y > sweep.max_y || !cell_clear(x, y)) { ++sweep.skipped; continue; }
+            {
+                // Where the game left the player since the previous placement, and its lifecycle state.
+                const auto bytes = host.region_bytes(2U); const auto rec = host.player_record(0U);
+                if (rec && rec + 0x70U < bytes.size())
+                    diag_log("sweep before frame %llu at %d,%d active %02x mode %04x +3f %02x +44 %04x +46 %04x",
+                             static_cast<unsigned long long>(devices.frame()),
+                             int(std::int16_t((bytes[rec + 0x12U] << 8) | bytes[rec + 0x13U])), int(std::int16_t((bytes[rec + 0x1aU] << 8) | bytes[rec + 0x1bU])),
+                             unsigned(bytes[rec]), (unsigned(bytes[rec + 0x44U]) << 8) | bytes[rec + 0x45U], unsigned(bytes[rec + 0x3fU]),
+                             (unsigned(bytes[rec + 0x44U]) << 8) | bytes[rec + 0x45U], (unsigned(bytes[rec + 0x46U]) << 8) | bytes[rec + 0x47U]);
+            }
+            if (!host.teleport_player(0U, x, y)) { stop_sweep("no player record during"); return; }
+            ++sweep.teleports;
+            diag_log("sweep teleport frame %llu cell %d x %d y %d", static_cast<unsigned long long>(devices.frame()), sweep.cell, x, y);
+            return;
+        }
+    }
+
+    void update_title(HWND window) const
+    {
+        std::wstring title = L"Gain Ground";
+        if (paused) title += L" - Paused";
+        if (selected_stage >= 0) {
+            wchar_t next[64]{};
+            std::swprintf(next, std::size(next), L" - Jumping to Round %d Stage %d",
+                selected_stage / 10 + 1, selected_stage % 10 + 1);
+            title += next;
+        }
+        SetWindowTextW(window, title.c_str());
+    }
+
+    // A choice ends the current stage through the original stage-clear
+    // sequence and loads the chosen stage, once. Made at the title, it applies
+    // on the first frame of the next game; the attract demo never consumes it.
+    void select_stage(HWND window, int stage)
+    {
+        const auto menu = GetMenu(window);
+        if (selected_stage >= 0)
+            CheckMenuItem(menu, kStageCommandBase + static_cast<UINT>(selected_stage), MF_BYCOMMAND | MF_UNCHECKED);
+        selected_stage = stage;
+        if (selected_stage >= 0)
+            CheckMenuItem(menu, kStageCommandBase + static_cast<UINT>(selected_stage), MF_BYCOMMAND | MF_CHECKED);
+        host.set_start_stage(selected_stage);
+        update_title(window);
+    }
+
+    // Off-screen paint buffer, kept across paints and recreated on resize.
+    HDC buffer_dc{}; HBITMAP buffer{}; LONG buffer_width{}, buffer_height{};
+    bool ensure_buffer(HDC window_dc, LONG width, LONG height)
+    {
+        if (buffer_dc && buffer && buffer_width == width && buffer_height == height) return true;
+        if (buffer) DeleteObject(buffer);
+        if (buffer_dc) DeleteDC(buffer_dc);
+        buffer_dc = CreateCompatibleDC(window_dc);
+        buffer = buffer_dc ? CreateCompatibleBitmap(window_dc, std::max<LONG>(1, width), std::max<LONG>(1, height)) : nullptr;
+        buffer_width = width; buffer_height = height;
+        if (buffer_dc && buffer) SelectObject(buffer_dc, buffer);
+        return buffer_dc && buffer;
+    }
+    ~RuntimeWindow() {
+        if (buffer) DeleteObject(buffer);
+        if (buffer_dc) DeleteDC(buffer_dc);
+        for (auto fiber : cpu_fiber) if (fiber) DeleteFiber(fiber);
+    }
 
     static void checkpoint(void *argument)
     {
         auto &app = *static_cast<RuntimeWindow *>(argument);
         if (app.host.faulted() || app.host.waiting_for_device() ||
-            (!app.host.timed_execution() && app.host.execution_checkpoints() >= app.next_yield)) {
-            app.next_yield = app.host.execution_checkpoints() + 4096U;
-            if (GetCurrentFiber() != app.ui_fiber) SwitchToFiber(app.ui_fiber);
+            (!app.host.timed_execution() && app.host.operations_since_switch() >= 4096U)) {
+            app.host.reset_yield_window();
+            if (GetCurrentFiber() != app.ui_fiber) { ++app.fiber_switches; SwitchToFiber(app.ui_fiber); }
         }
     }
 
@@ -234,11 +400,17 @@ struct RuntimeWindow {
             // CPU A first runs the original BIOS sound calls on its fiber.
             // Their device clocks remain part of this same emulated timeline.
         }
-        const auto target_ns = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - epoch).count());
+        const auto target_ns = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - epoch).count() * speed);
         // Allow enough work to catch up between UI timer messages (~16 ms).
         // This is a work ceiling, not a delay: stop at the wall-clock target.
-        const auto host_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(20);
+        // Above real speed the same ceiling scales with the speed, so a tick may
+        // run several emulated frames; the window only needs to stay responsive.
+        const auto host_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(static_cast<long long>(20 * std::max(1.0, speed)));
+        unsigned work_iterations = 0U;
         do {
+        // A CPU fiber may have stepped the device clock itself while waiting;
+        // the device timer must never be asked to move backwards.
+        emulated_ns = std::max(emulated_ns, devices.time_ns());
         devices.advance(emulated_ns);
         for (unsigned i = 0; i < 2; ++i) {
             if (i == 1 && !devices.cpu_b_enabled()) continue;
@@ -259,7 +431,8 @@ struct RuntimeWindow {
             }
             if (!finished[i] && !host.faulted()) {
                 host.select_cpu(i);
-                next_yield = host.execution_checkpoints() + 4096U;
+                host.reset_yield_window();
+                ++fiber_switches;
                 SwitchToFiber(cpu_fiber[i]);
             }
             if (finished[i]) {
@@ -274,15 +447,30 @@ struct RuntimeWindow {
             }
         }
         if (last_frame != devices.frame()) {
-            video.render(host);
+            const auto now = std::chrono::steady_clock::now();
+            if (speed <= 1.0 || now - last_render >= std::chrono::milliseconds(16)) {
+                video.render(host);
+                last_render = now;
+                frame_dirty = true;
+            }
             last_frame = devices.frame();
+            sweep_step();
+            // Determinism probe for performance work: the execution checkpoint
+            // count at fixed frames must not move when only host code changes.
+            if (diag && last_frame % 600U == 0U)
+                diag_log("progress frame %llu checkpoints %llu switches %llu", static_cast<unsigned long long>(last_frame),
+                         static_cast<unsigned long long>(host.execution_checkpoints()), static_cast<unsigned long long>(fiber_switches));
         }
         const auto next = std::min(devices.next_event_ns(), host.next_cpu_deadline_ns());
         if (next <= emulated_ns) { error = L"Device clock did not advance"; return; }
         if (emulated_ns >= target_ns) break;
         emulated_ns = std::min(next, target_ns);
-        } while (!host.faulted() && std::chrono::steady_clock::now() < host_deadline);
-        if (!output.submit(devices.audio.take_samples())) { error = L"Audio output failed"; return; }
+        // The wall-clock read is comparatively costly on this toolchain; checking
+        // the work ceiling every few iterations changes only how long a tick works.
+        } while (!host.faulted() && ((++work_iterations & 31U) != 0U || std::chrono::steady_clock::now() < host_deadline));
+        auto samples = devices.audio.take_samples();
+        if (speed > 1.0) return; // Faster than real time: keep the mixer drained, play nothing.
+        if (!output.submit(std::move(samples))) { error = L"Audio output failed"; return; }
     }
 
     std::wstring status() const
@@ -326,10 +514,22 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
         return DefWindowProcW(window, message, wparam, lparam);
     }
     case WM_TIMER:
-        if (app) { app->poll_controllers(window); app->advance(); app->save_failure(); InvalidateRect(window, nullptr, FALSE); }
+        if (app) {
+            app->poll_controllers(window); app->advance(); app->save_failure();
+            if (app->host.take_start_stage_applied()) app->select_stage(window, -1);
+            if (app->frame_dirty || app->host.faulted() || !app->error.empty()) { app->frame_dirty = false; InvalidateRect(window, nullptr, FALSE); }
+        }
         return 0;
     case WM_COMMAND:
-        if (app && LOWORD(wparam) == kPauseCommand) app->toggle_pause(window);
+        if (app) {
+            const UINT command = LOWORD(wparam);
+            if (command == kPauseCommand) app->toggle_pause(window);
+            else if (command == kStageContinueCommand) app->select_stage(window, -1);
+            else if (command == kSweepStartCommand) app->start_sweep();
+            else if (command == kSweepStopCommand) app->stop_sweep("stopped");
+            else if (command >= kStageCommandBase && command < kStageCommandBase + kStageCount)
+                app->select_stage(window, static_cast<int>(command - kStageCommandBase));
+        }
         return 0;
     case WM_KEYDOWN: case WM_KEYUP:
         if (app) {
@@ -373,12 +573,8 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
         const auto window_dc = BeginPaint(window, &paint);
         RECT rect{};
         GetClientRect(window, &rect);
-        const auto buffer_dc = CreateCompatibleDC(window_dc);
-        const auto buffer = CreateCompatibleBitmap(window_dc,
-            std::max<LONG>(1, rect.right), std::max<LONG>(1, rect.bottom));
-        const bool buffered = buffer_dc && buffer;
-        const auto dc = buffered ? buffer_dc : window_dc;
-        const auto previous_bitmap = buffered ? SelectObject(dc, buffer) : nullptr;
+        const bool buffered = app && app->ensure_buffer(window_dc, rect.right, rect.bottom);
+        const auto dc = buffered ? app->buffer_dc : window_dc;
         // Clear and compose off-screen so a black intermediate paint cannot
         // become visible between FillRect and StretchDIBits.
         FillRect(dc, &rect, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
@@ -405,14 +601,7 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
             const auto text = app->status();
             DrawTextW(dc, text.c_str(), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
         }
-        if (buffered) {
-            RECT client{};
-            GetClientRect(window, &client);
-            BitBlt(window_dc, 0, 0, client.right, client.bottom, dc, 0, 0, SRCCOPY);
-            SelectObject(dc, previous_bitmap);
-        }
-        if (buffer) DeleteObject(buffer);
-        if (buffer_dc) DeleteDC(buffer_dc);
+        if (buffered) BitBlt(window_dc, 0, 0, rect.right, rect.bottom, dc, 0, 0, SRCCOPY);
         EndPaint(window, &paint);
         return 0;
     }
@@ -447,6 +636,26 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
         return 2;
     }
     auto app = std::make_unique<RuntimeWindow>();
+    // Test aids from the environment; absent variables leave normal play untouched.
+    if (const char *value = std::getenv("GAIN_GROUND_TEST_SPEED"); value && *value) {
+        const auto requested = std::strtod(value, nullptr);
+        if (requested >= 0.1 && requested <= 100.0) app->speed = requested;
+    }
+    if (const char *value = std::getenv("GAIN_GROUND_INVULNERABLE"); value && *value && *value != '0')
+        app->host.set_player_invulnerable(true);
+    if (const char *value = std::getenv("GAIN_GROUND_NAV_LOG"); value && *value)
+        app->diag = std::fopen(value, "a");
+    // Statistical sampling of this thread for performance work (see host_sampler.h).
+    gain_ground::HostSampler sampler;
+    if (const char *value = std::getenv("GAIN_GROUND_SAMPLE"); value && *value) sampler.start(value);
+    if (const char *value = std::getenv("GAIN_GROUND_SWEEP_BOUNDS"); value && *value) {
+        int x0, x1, y0, y1;
+        if (std::sscanf(value, "%d,%d,%d,%d", &x0, &x1, &y0, &y1) == 4) { app->sweep.min_x = x0; app->sweep.max_x = x1; app->sweep.min_y = y0; app->sweep.max_y = y1; }
+    }
+    if (const char *value = std::getenv("GAIN_GROUND_SWEEP_FRAMES"); value && *value) {
+        const auto frames = std::strtoul(value, nullptr, 10);
+        if (frames >= 1U && frames <= 600U) app->sweep.frames_per_cell = static_cast<unsigned>(frames);
+    }
     if (!character_path.empty()) {
         std::string error;
         if (!app->host.load_character_definitions(character_path, error)) {
@@ -503,6 +712,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
         if (!app->cpu_fiber[i]) { app.reset(); if (own_fiber) ConvertFiberToThread(); return 2; }
     }
     app->host.set_checkpoint(&RuntimeWindow::checkpoint, app.get());
+    // In-place waits reproduce this scheduler's stepping exactly; GAIN_GROUND_DIRECT_WAIT=0 compares without them.
+    if (const char *value = std::getenv("GAIN_GROUND_DIRECT_WAIT"); !(value && *value == '0')) app->host.set_direct_wait(true);
     WNDCLASSW klass{};
     klass.lpfnWndProc = &window_proc;
     klass.hInstance = instance;
@@ -516,8 +727,26 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
         return 2;
     }
     const auto menu = CreateMenu();
-    if (!menu || !AppendMenuW(menu, MF_STRING, kPauseCommand, L"&Pause (P)")) {
-        if (menu) DestroyMenu(menu);
+    const auto stage_menu = CreatePopupMenu();
+    bool menu_ok = menu && stage_menu && AppendMenuW(menu, MF_STRING, kPauseCommand, L"&Pause (P)");
+    for (UINT round = 0; menu_ok && round < kStageCount / 10U; ++round) {
+        const auto round_menu = CreatePopupMenu();
+        menu_ok = round_menu != nullptr;
+        for (UINT stage = 0; menu_ok && stage < 10U; ++stage) {
+            wchar_t label[32]{};
+            std::swprintf(label, std::size(label), L"Stage &%u", stage + 1U);
+            menu_ok = AppendMenuW(round_menu, MF_STRING, kStageCommandBase + round * 10U + stage, label);
+        }
+        wchar_t label[32]{};
+        std::swprintf(label, std::size(label), L"Round &%u", round + 1U);
+        menu_ok = menu_ok && AppendMenuW(stage_menu, MF_POPUP, reinterpret_cast<UINT_PTR>(round_menu), label);
+    }
+    menu_ok = menu_ok && AppendMenuW(stage_menu, MF_SEPARATOR, 0, nullptr) &&
+        AppendMenuW(stage_menu, MF_STRING, kStageContinueCommand, L"&Continue normally") &&
+        AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(stage_menu), L"&Stage");
+    if (!menu_ok) {
+        if (menu) DestroyMenu(menu); // Attached popups are destroyed with it.
+        else if (stage_menu) DestroyMenu(stage_menu);
         app.reset();
         if (own_fiber) ConvertFiberToThread();
         return 2;
