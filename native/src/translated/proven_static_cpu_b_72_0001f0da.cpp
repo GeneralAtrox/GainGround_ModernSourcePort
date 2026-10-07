@@ -50,21 +50,23 @@ FunctionResult proven_static_cpu_b_72_0001f0da(
                 context.registers.program_counter};
 
     auto &r = context.registers;
-    const auto left = static_cast<std::uint16_t>(r.data[5]);
-    const auto right = static_cast<std::uint16_t>(r.data[7]);
-    const auto difference = static_cast<std::uint16_t>(left - right);
-    r.data[5] = (r.data[5] & 0xffff0000U) | difference;
-    set_sub_word_flags(r, left, right, difference);
+    // sub.w d7,d5 / dbf d4,$1f0da. The caller sets only d4's low byte, so the
+    // word count can run to 65535: iterate here instead of re-entering this
+    // entry once per iteration, which would exceed the native call depth.
+    for (;;) {
+        const auto left = static_cast<std::uint16_t>(r.data[5]);
+        const auto right = static_cast<std::uint16_t>(r.data[7]);
+        const auto difference = static_cast<std::uint16_t>(left - right);
+        r.data[5] = (r.data[5] & 0xffff0000U) | difference;
+        set_sub_word_flags(r, left, right, difference);
 
-    const auto counter = static_cast<std::uint16_t>(r.data[4] - 1U);
-    r.data[4] = (r.data[4] & 0xffff0000U) | counter;
-    if (counter != 0xffffU) {
-        const auto continuation = dispatch(
-            context, 609U, 1U, 0x0001f0dcU, 0x0001f0daU);
-        if (continuation.status == TranslationStatus::complete
-            && continuation.control == 3U)
+        const auto counter = static_cast<std::uint16_t>(r.data[4] - 1U);
+        r.data[4] = (r.data[4] & 0xffff0000U) | counter;
+        if (counter == 0xffffU) break;
+        r.program_counter = 0x0001f0daU;
+        if (context.host->consume_self_continuation_boundary(609U, 1U, 0x72U,
+                1U, 0x0001f0dcU, 0x0001f0daU, context))
             return FunctionResult::complete(4U, 0x0001f0daU);
-        return continuation;
     }
 
     r.data[6] = (r.data[6] << 16U) | (r.data[6] >> 16U);

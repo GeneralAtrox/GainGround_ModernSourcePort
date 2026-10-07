@@ -58,40 +58,42 @@ FunctionResult proven_static_cpu_b_72_00015fc2(
     auto &host = *context.host;
     auto &registers = context.registers;
 
-    const auto source = host.read_memory_word(
-        kPrivateRegion, registers.address[1] & 0x0003ffffU, kWordMask);
-    registers.address[1] += 2U;
-    registers.data[0] = (registers.data[0] & 0xffff0000U) | source;
-    set_logic_word(registers, source);
+    // dbf d2,$15fc2 with d2 read from the data stream: iterate here instead
+    // of re-entering this entry once per row, which could exceed the native
+    // call depth.
+    for (;;) {
+        const auto source = host.read_memory_word(
+            kPrivateRegion, registers.address[1] & 0x0003ffffU, kWordMask);
+        registers.address[1] += 2U;
+        registers.data[0] = (registers.data[0] & 0xffff0000U) | source;
+        set_logic_word(registers, source);
 
-    const auto first_tile_offset =
-        (registers.address[0] - 0x00200000U) & 0x0003ffffU;
-    host.write_memory_word(kTileRegion, first_tile_offset, source, kWordMask);
-    registers.address[0] += 2U;
-    set_logic_word(registers, source);
+        const auto first_tile_offset =
+            (registers.address[0] - 0x00200000U) & 0x0003ffffU;
+        host.write_memory_word(kTileRegion, first_tile_offset, source, kWordMask);
+        registers.address[0] += 2U;
+        set_logic_word(registers, source);
 
-    const auto incremented = static_cast<std::uint16_t>(source + 1U);
-    registers.data[0] = (registers.data[0] & 0xffff0000U) | incremented;
-    set_add_word(registers, source, 1U, incremented);
+        const auto incremented = static_cast<std::uint16_t>(source + 1U);
+        registers.data[0] = (registers.data[0] & 0xffff0000U) | incremented;
+        set_add_word(registers, source, 1U, incremented);
 
-    host.write_memory_word(
-        kTileRegion,
-        (registers.address[0] - 0x00200000U) & 0x0003ffffU,
-        incremented,
-        kWordMask);
-    set_logic_word(registers, incremented);
-    registers.address[0] += 0x7eU;
+        host.write_memory_word(
+            kTileRegion,
+            (registers.address[0] - 0x00200000U) & 0x0003ffffU,
+            incremented,
+            kWordMask);
+        set_logic_word(registers, incremented);
+        registers.address[0] += 0x7eU;
 
-    const auto counter = static_cast<std::uint16_t>(registers.data[2]);
-    const auto next_counter = static_cast<std::uint16_t>(counter - 1U);
-    registers.data[2] = (registers.data[2] & 0xffff0000U) | next_counter;
-    if (next_counter != 0xffffU) {
+        const auto counter = static_cast<std::uint16_t>(registers.data[2]);
+        const auto next_counter = static_cast<std::uint16_t>(counter - 1U);
+        registers.data[2] = (registers.data[2] & 0xffff0000U) | next_counter;
+        if (next_counter == 0xffffU) break;
         registers.program_counter = 0x00015fc2U;
-        const auto loop = host.call_function(
-            474U, 1U, 0x72U, 1U, 0x00015fceU, 0x00015fc2U, context);
-        if (loop.status == TranslationStatus::complete && loop.control == 3U)
+        if (host.consume_self_continuation_boundary(474U, 1U, 0x72U,
+                1U, 0x00015fceU, 0x00015fc2U, context))
             return FunctionResult::complete(4U, 0x00015fc2U);
-        return loop;
     }
 
     const auto target = pop_return(host, registers);

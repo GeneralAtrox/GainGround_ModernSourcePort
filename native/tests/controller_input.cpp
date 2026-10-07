@@ -1,5 +1,6 @@
 #include "gain_ground/runtime_input.h"
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <tuple>
 #include <vector>
@@ -55,5 +56,36 @@ int main(){try{
     System24Devices replay;RuntimeKeyboard replay_input;
     for(auto [key,pressed]:journal)replay_input.key(replay,key,pressed);
     check(!(port(replay,2)&2),"Controller 3 journal did not replay independently");
-    std::cout<<"PASS: three slots, mixed sources, dead zones, disconnects, pause/focus and replay\n";
+    // Remapping: a used code swaps actions, Enter joins only while unbound,
+    // and the saved form round-trips while rejecting reserved or malformed codes.
+    RuntimeBindings custom;
+    RuntimeBindings::assign(custom.keys,action_attack,' ');
+    RuntimeBindings::assign(custom.keys,action_credit,0x0d);
+    RuntimeBindings::assign(custom.keys,action_up,'E');
+    check(custom.keys[action_big_attack]=='W',"Rebinding a used key did not swap it");
+    System24Devices m;RuntimeKeyboard mapped;mapped.set_bindings(custom.keys);
+    check(mapped.key(m,' ',true) && port(m,0)==(255U&~2U),"Rebound attack key missing");
+    mapped.key(m,' ',false);
+    check(!mapped.key(m,'Q',true),"Replaced key remained bound");
+    check(mapped.key(m,0x0d,true) && port(m,0)==254 && port(m,4)==254,"Enter bound to credit also joined");
+    mapped.key(m,0x0d,false);
+    check(mapped.key(m,'E',true) && port(m,0)==(255U&~0x20U),"Swapped key drove the wrong action");
+    mapped.key(m,'E',false);
+    check(!mapped.key(m,'P',true),"Pause key reached the game");
+    RuntimeBindings::assign(custom.pad,action_attack,0x2000);
+    RuntimeBindings::assign(custom.pad,action_pause,0x8000);
+    System24Devices pd;RuntimeKeyboard pad_input;RuntimePad pad;pad.set_bindings(custom.pad);
+    const auto pad_sample=[&](unsigned buttons){
+        return pad.update({true,buttons,0,0},true,true,[&](unsigned bit,bool pressed){pad_input.key(pd,RuntimeKeyboard::gamepad_key(0,bit),pressed);});
+    };
+    pad_sample(0x1000);check(port(pd,0)==255,"Unbound controller button still attacked");
+    pad_sample(0x2000);check(port(pd,0)==(255U&~2U),"Rebound controller attack missing");
+    check(!pad_sample(0x10) && pad_sample(0x8010),"Rebound controller pause did not move");
+    std::stringstream saved;custom.write(saved);
+    RuntimeBindings loaded;loaded.read(saved);
+    check(loaded.keys==custom.keys && loaded.pad==custom.pad,"Saved bindings did not round-trip");
+    std::stringstream bad("keyboard.attack=27\ncontroller.up=0x3\nkeyboard.nothing=65\ngarbage\nkeyboard.credit=x\n");
+    RuntimeBindings defaults;defaults.read(bad);
+    check(defaults.keys==RuntimeBindings{}.keys && defaults.pad==RuntimeBindings{}.pad,"Invalid saved bindings were accepted");
+    std::cout<<"PASS: three slots, mixed sources, dead zones, disconnects, pause/focus, replay and remapping\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}

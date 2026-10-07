@@ -20,6 +20,14 @@ add_library(gain_ground_contracts STATIC
     src/checkpoint_writer.cpp
     src/fixture_bundle.cpp
     src/fixture_compare.cpp
+    src/fixture_compare_host_memory.cpp
+    src/fixture_compare_host_hardware.cpp
+    src/fixture_compare_host_interrupts.cpp
+    src/fixture_compare_host_calls.cpp
+    src/fixture_compare_host_compatibility_early.cpp
+    src/fixture_compare_host_compatibility_current.cpp
+    src/fixture_compare_host_compatibility_partition.cpp
+    src/fixture_compare_host_finish.cpp
     generated/gground_fixture_marker_compatibility.cpp
     generated/gground_function_stubs.cpp
     generated/gground_stage_callbacks.cpp
@@ -30,6 +38,59 @@ add_library(gain_ground_contracts STATIC
     src/translated/cpu_b_stage_object_callbacks.cpp
     src/translated/cpu_b_stage_gap_callbacks.cpp
     src/translated/cpu_b_initials_entry.cpp
+    src/translated/cpu_b_initials_entry_region_f094_f0ff.cpp
+    src/translated/cpu_b_initials_entry_region_f100_f1ff.cpp
+    src/translated/cpu_b_initials_entry_region_f200_f2ff.cpp
+    src/translated/cpu_b_initials_entry_region_f300_f3aa.cpp
+    src/translated/cpu_b_72_000121f4_descriptor_setup.cpp
+    src/translated/cpu_b_72_000121f4_record_fields.cpp
+    src/translated/cpu_b_72_000121f4_tail_fields.cpp
+    src/translated/cpu_b_advance_phase_callback_region_d734_d7d2.cpp
+    src/translated/cpu_b_advance_phase_callback_region_d7d4_d85e.cpp
+    src/translated/cpu_b_advance_phase_callback_region_d862_d8d4.cpp
+    src/translated/cpu_b_advance_phase_callback_region_d8da_d952.cpp
+    src/translated/cpu_b_advance_phase_callback_region_d958_d9e8.cpp
+    src/translated/cpu_b_advance_phase_callback_region_d9ea_da8e.cpp
+    src/translated/cpu_b_advance_phase_callback_region_da92_db0a.cpp
+    src/translated/cpu_b_advance_phase_callback_region_db10_db9e.cpp
+    src/translated/cpu_b_advance_phase_palette_lookup_setup.cpp
+    src/translated/cpu_b_advance_phase_palette_overlay_updates.cpp
+    src/translated/cpu_b_build_sprite_lists_range_016d16_016d8a.cpp
+    src/translated/cpu_b_build_sprite_lists_range_016d8c_016df2.cpp
+    src/translated/cpu_b_build_sprite_lists_range_016df6_016e60.cpp
+    src/translated/cpu_b_build_sprite_lists_range_016e66_016ed2.cpp
+    src/translated/cpu_b_build_sprite_lists_range_016ed6_016f3c.cpp
+    src/translated/cpu_b_build_sprite_lists_range_016f40_016f6a.cpp
+    src/translated/cpu_b_callback_state_table_region_ee9e_ef26.cpp
+    src/translated/cpu_b_callback_state_table_region_ef30_ef90.cpp
+    src/translated/cpu_b_callback_state_table_region_ef96_f04e.cpp
+    src/translated/cpu_b_callback_state_table_region_f05a_f08c.cpp
+    src/translated/cpu_b_callback_state_table_region_f23e_f25e.cpp
+    src/translated/cpu_b_state72_record_region_f3c0_f58c.cpp
+    src/translated/cpu_b_state72_record_region_f590_f608.cpp
+    src/translated/cpu_b_state72_record_region_f60c_f69e.cpp
+    src/translated/cpu_b_state72_record_region_f6a4_f728.cpp
+    src/translated/cpu_b_state72_record_region_f72e_f7d4.cpp
+    src/translated/cpu_b_state72_record_region_f7d8_f86e.cpp
+    src/translated/cpu_b_state72_record_region_f870_f90c.cpp
+    src/translated/cpu_b_state72_record_region_f910_fe3a.cpp
+    src/translated/cpu_b_advance_phase_callback_dispatch.cpp
+    src/translated/cpu_b_advance_phase_palette_overlay_dispatch.cpp
+    src/translated/cpu_b_build_sprite_lists.cpp
+    src/translated/cpu_b_callback_state_table_dispatch.cpp
+    src/translated/cpu_b_compute_record_deltas_detail.cpp
+    src/translated/cpu_b_compute_record_deltas.cpp
+    src/translated/cpu_b_dispatch_state_step.cpp
+    src/translated/cpu_b_dispatch_state_step_detail.cpp
+    src/translated/cpu_b_mode_dispatch_d368_detail.cpp
+    src/translated/cpu_b_mode_dispatch_ecdc_detail.cpp
+    src/translated/cpu_b_mode_dispatch_d368.cpp
+    src/translated/cpu_b_mode_dispatch_ecdc.cpp
+    src/translated/cpu_b_record_flag1_gate_detail.cpp
+    src/translated/cpu_b_record_flag1_gate_variant_detail.cpp
+    src/translated/cpu_b_record_flag1_gate.cpp
+    src/translated/cpu_b_record_flag1_gate_variant.cpp
+    src/translated/cpu_b_state72_dispatch_record_phase.cpp
     ${GAIN_GROUND_IMPLEMENTATION_SOURCES}
 )
 target_include_directories(gain_ground_contracts
@@ -41,7 +102,23 @@ target_link_libraries(gain_ground_contracts PUBLIC ZLIB::ZLIB)
 
 add_library(gain_ground_ymfm STATIC third_party/ymfm/ymfm_opm.cpp)
 target_include_directories(gain_ground_ymfm SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ymfm)
-add_library(gain_ground_runtime_host STATIC src/runtime_host.cpp src/direct_asset_loader.cpp src/direct_boot_audio.cpp src/system24_video.cpp src/system24_audio.cpp src/system24_devices.cpp src/rom_archive.cpp src/rom_import.cpp)
+add_library(gain_ground_runtime_host STATIC
+    src/runtime_host.cpp
+    src/native_game_loop.cpp
+    src/runtime_host_boot.cpp
+    src/runtime_host_clock.cpp
+    src/runtime_host_execution.cpp
+    src/runtime_host_gameplay.cpp
+    src/runtime_host_hardware.cpp
+    src/runtime_host_memory.cpp
+    src/direct_asset_loader.cpp
+    src/direct_boot_audio.cpp
+    src/system24_video.cpp
+    src/system24_audio.cpp
+    src/system24_devices.cpp
+    src/rom_archive.cpp
+    src/rom_import.cpp
+)
 target_sources(gain_ground_runtime_host PRIVATE
     src/gameplay/character.cpp
     src/gameplay/projectile.cpp
@@ -71,7 +148,16 @@ if(WIN32)
     target_link_libraries(gain_ground_runtime_host PUBLIC bcrypt)
     add_executable(gain_ground_rom_import tests/rom_import_main.cpp)
     target_link_libraries(gain_ground_rom_import PRIVATE gain_ground_runtime_host)
-    add_executable(gain_ground_runtime WIN32 src/runtime_win32.cpp src/runtime_startup_win32.cpp src/host_sampler_win32.cpp)
+    add_executable(gain_ground_runtime WIN32
+        src/runtime_win32.cpp
+        src/runtime_win32_controls.cpp
+        src/runtime_win32_emulation.cpp
+        src/runtime_win32_input.cpp
+        src/runtime_win32_diagnostics.cpp
+        src/runtime_win32_presentation.cpp
+        src/runtime_startup_win32.cpp
+        src/host_sampler_win32.cpp
+    )
     target_link_libraries(gain_ground_runtime PRIVATE gain_ground_runtime_host user32 gdi32 shell32 bcrypt winmm comdlg32 ole32 uuid psapi dbghelp)
     target_compile_definitions(gain_ground_runtime PRIVATE UNICODE _UNICODE)
     if(MINGW)
@@ -91,6 +177,18 @@ else()
 endif()
 
 add_executable(gain_ground_fixture_smoke tests/fixture_bundle_smoke.cpp)
+add_executable(gain_ground_native_loop_probe tests/native_loop_probe.cpp)
+target_link_libraries(gain_ground_native_loop_probe PRIVATE gain_ground_runtime_host)
+if(WIN32)
+    target_link_libraries(gain_ground_native_loop_probe PRIVATE winmm)
+endif()
+add_executable(gain_ground_native_loop_depth tests/native_loop_depth.cpp)
+add_executable(gain_ground_native_service_clock tests/native_service_clock.cpp)
+target_link_libraries(gain_ground_native_service_clock PRIVATE gain_ground_runtime_host)
+add_test(NAME gain_ground_native_service_clock COMMAND gain_ground_native_service_clock)
+target_link_libraries(gain_ground_native_loop_depth PRIVATE gain_ground_runtime_host)
+add_test(NAME gain_ground_native_loop_depth COMMAND gain_ground_native_loop_depth)
+set_tests_properties(gain_ground_native_loop_depth PROPERTIES LABELS "native-child-boundary")
 target_link_libraries(gain_ground_fixture_smoke PRIVATE gain_ground_contracts)
 if(MSVC)
     target_compile_options(gain_ground_fixture_smoke PRIVATE /W4 /permissive-)
@@ -140,6 +238,9 @@ else()
 endif()
 
 enable_testing()
+add_test(NAME gain_ground_source_line_limit
+    COMMAND ${CMAKE_COMMAND} -DSOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/CheckSourceLineLimit.cmake)
 add_executable(gain_ground_video_transparency tests/video_transparency.cpp)
 target_link_libraries(gain_ground_video_transparency PRIVATE gain_ground_runtime_host)
 add_test(NAME gain_ground_video_transparency COMMAND gain_ground_video_transparency)
@@ -259,7 +360,7 @@ add_custom_target(check_native_child_boundaries
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --no-tests=error
         --label-regex "^native-child-boundary$"
     DEPENDS gain_ground_coin_child_return gain_ground_irq_child_return gain_ground_frame_wait_child_return gain_ground_input_sampler_child_return gain_ground_player_start_input gain_ground_controller_input gain_ground_player_strip_bytes gain_ground_sound_irq_timing gain_ground_scene_child_timing gain_ground_audio_busy_deadline gain_ground_enemy_navigation gain_ground_enemy_navigation_combat gain_ground_enemy_attack_direction
-        gain_ground_nonlocal_actor_callers gain_ground_runtime_dispatch_repairs gain_ground_saved_actor_callback gain_ground_character_smoke
+        gain_ground_nonlocal_actor_callers gain_ground_runtime_dispatch_repairs gain_ground_saved_actor_callback gain_ground_character_smoke gain_ground_native_loop_depth
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     VERBATIM
     USES_TERMINAL)

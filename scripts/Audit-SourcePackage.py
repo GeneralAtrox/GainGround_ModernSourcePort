@@ -36,6 +36,10 @@ EXACT = {
     "scripts/Generate-GapTranslations.py",
     "scripts/Resolve-Samples.py",
     "scripts/Test-StageSelect.ps1",
+    "scripts/native_source_layout.py", "scripts/test_native_source_layout.py",
+    "native/CheckSourceLineLimit.cmake",
+    "docs/source-line-split-20260927.md", "docs/source-line-split-20260927.json",
+    "docs/native-game-loop-20261007.md", "docs/native-game-loop-20261007.json",
 }
 PREFIXES = ("native/include/", "native/src/", "native/generated/", "native/tests/", "native/third_party/")
 EXTENSIONS = {".cpp", ".h", ".hpp", ".c", ".inc", ".ipp", ".cmake", ".txt"}
@@ -43,7 +47,10 @@ EXCLUDED = {"native/generated/gground_game_definitions.cpp"}
 
 
 def permitted(name):
-    return name not in EXCLUDED and (name in EXACT or
+    return name not in EXCLUDED and not name.startswith(
+        ("native/generated/gground_game_definitions.cpp.part",
+         "native/generated/gground_game_definitions.cpp.module",
+         "native/generated/gground_game_definitions.module")) and (name in EXACT or
         (name.startswith(PREFIXES) and Path(name).suffix in EXTENSIONS))
 
 

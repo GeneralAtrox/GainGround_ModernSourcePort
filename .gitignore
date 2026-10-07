@@ -8,6 +8,7 @@
 !/native/
 /native/*
 !/native/CMakeLists.txt
+!/native/CheckSourceLineLimit.cmake
 !/native/README.md
 !/native/include/
 !/native/src/
@@ -15,6 +16,9 @@
 !/native/tests/
 !/native/third_party/
 /native/generated/gground_game_definitions.cpp
+/native/generated/gground_game_definitions.cpp.part*.inc
+/native/generated/gground_game_definitions.cpp.module*.inc
+/native/generated/gground_game_definitions.module*.inc
 /native/generated/native-codegen-manifest.json
 !/scripts/
 /scripts/*
@@ -23,10 +27,14 @@
 !/scripts/Audit-SourcePackage.py
 !/scripts/Test-StageSelect.ps1
 !/scripts/Generate-GapTranslations.py
+!/scripts/native_source_layout.py
+!/scripts/test_native_source_layout.py
 !/scripts/Resolve-Samples.py
 !/docs/
 /docs/*
 !/docs/source-release.md
+!/docs/source-line-split-20260927.md
+!/docs/source-line-split-20260927.json
 !/docs/acceptance-baseline-20260926.md
 !/docs/audio-sample-contract-20260926.md
 !/docs/graphics-inventory-investigation-20260926.md
@@ -73,3 +81,5 @@
 *.ggfz
 *.ggfx
 __pycache__/
+!/docs/native-game-loop-20261007.md
+!/docs/native-game-loop-20261007.json

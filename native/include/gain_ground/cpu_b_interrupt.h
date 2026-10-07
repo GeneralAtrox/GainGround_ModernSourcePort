@@ -95,6 +95,7 @@ inline FunctionResult service_cpu_b_autovector(FunctionContext &c, std::uint8_t 
         if (function.cpu != 1U || function.state != 0x04U || function.address != target) continue;
         const auto child = host.call_function(function.id, 1U, 0x04U, 6U, site, target, c);
         if (child.status != TranslationStatus::complete) return child;
+        if (child.control == 9U) return child; // Stack reset: unwinding past the ISR.
         if (!host.resumes_interrupts_inline()) return FunctionResult::complete(5U, target);
         if (child.control != 2U || child.exit_program_counter != r.program_counter ||
             r.address[7] != saved_sp ||

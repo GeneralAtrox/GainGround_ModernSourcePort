@@ -14,6 +14,8 @@ Removing game data is not legal clearance of the translated code. See
 - Steady foreground drawing replaces alternate-frame wall flicker while keeping characters opaque.
 - Player 1 keyboard controls use WASD/Q/E/F, with an optional unlimited-credits mode.
 - Fixed secondary-attack projectile crashes affecting five character IDs.
+- Single native game loop replaces independently scheduled CPU-A/CPU-B workers.
+- Bounded iteration prevents the reported 0x1F0DA call-depth crash.
 
 ## Build
 
@@ -76,15 +78,23 @@ Three players share the stage. Keyboard controls player 1; Xbox controllers 1-3
 control the matching slots. Press **P** or use the Pause menu to pause; the title
 changes to **Gain Ground - Paused**.
 
-Keyboard controls are exclusively for player 1: **WASD** moves, **Q** uses the
-small attack, **E** uses the bigger attack, and **F** adds a credit. Press
-**Enter** (or an attack button) to join/start. **Esc** exits. Left/right mouse
-buttons also perform the two attacks. The old arrow, Z/X and number-key
+Keyboard controls are exclusively for player 1. By default **WASD** moves, **Q**
+uses the small attack, **E** uses the bigger attack, and **F** adds a credit.
+Press **Enter** (or an attack button) to join/start. **Esc** exits. Left/right
+mouse buttons also perform the two attacks. The old arrow, Z/X and number-key
 bindings are disabled; additional players use controllers.
 
-Toggle **Unlimited credits** in the menu to start and continue without spending
+**Settings > Controls...** remaps the keyboard and the controller layout (shared
+by all three controllers). Click a binding, then press the new key or button; a
+key already in use swaps with it. The game pauses while the dialog is open, and
+the choices are saved to `%LOCALAPPDATA%\GainGround\controls.ini`. Esc and the
+Pause key stay fixed, the left stick always moves, and Enter stops joining once
+it is bound to another action.
+
+Toggle **Settings > Unlimited credits** to start and continue without spending
 credits. It is off at launch and applies to all players for the current session.
-Switch it off to return to the normal credit balance.
+While it is on, the menu item is checked and the window title shows
+"Unlimited credits". Switch it off to return to the normal credit balance.
 
 The **Stage** menu jumps to a chosen stage (Round 1-4, Stage 1-10). During play
 the current stage ends at once through the game's own stage-clear sequence and
@@ -107,17 +117,25 @@ runtime thread; on exit it writes a histogram that
 `scripts/Resolve-Samples.py build/gain_ground_runtime.exe <path>` ranks by
 function (build with `-g` for symbols; samples in system DLLs are attributed
 by module and export). `GAIN_GROUND_NAV_LOG` adds a `progress` line every 600
-frames with the execution checkpoint count, which must not change when only
-host code changes.
+frames with execution counts and audio queue diagnostics.
 
-Measured on this basis: rendering and painting every emulated frame were the
-largest host costs and are now limited to display rate above real speed. The
-remaining cost is structural: the two CPUs are cycle-timed and interleaved
-through fiber switches, about eleven million per emulated second, so the
-exact original ordering leaves little to remove without a cheaper context
-switch. `GAIN_GROUND_DIRECT_WAIT=0` disables the in-place device-clock step
-that a waiting CPU may take when the other cannot run first; it changes no
-guest behaviour either way.
+The playable runtime uses one native game loop and one monotonic device clock.
+Input, actor updates, sprite construction, asset loading and timed sound services
+execute serially. Original CPU/state tags and register layouts remain as call
+adapters for translated routines and fixture research; they do not identify
+independently running CPUs. The Windows game thread has one resumable call stack
+so long operations can yield every presentation slice for input and audio delivery.
+Board events remain pending until their serial service consumes them.
+
+The old `GAIN_GROUND_QUANTUM` and `GAIN_GROUND_DIRECT_WAIT` settings no longer
+select a scheduler in the playable executable. Rendering remains limited to
+display rate above real speed. See [migration and checks](docs/native-game-loop-20261007.md)
+for the tested scope and the remaining arcade-parity limits.
+
+The migration check passed 30 CTest checks, all 40 stage smoke cases and all 60
+character movement/attack cases. Live original/replacement audio checks reported
+no starvation, dropped buffers or clipping after pacing was corrected. Historical
+contract generation and full fixture parity remain blocked as detailed above.
 
 ## Source and checks
 
@@ -151,10 +169,12 @@ stays below the exit strip at the top of the field, because the original ends a
 player who reaches the exit with an empty roster. The test aids behind it are
 environment variables read at startup and otherwise inert:
 `GAIN_GROUND_TEST_SPEED` (audio is dropped above 1; the current emulation
-sustains about 1.4x on one core), `GAIN_GROUND_INVULNERABLE` (hits are ignored
+sustains about 3x on one core), `GAIN_GROUND_INVULNERABLE` (hits are ignored
 without marking the attacker), `GAIN_GROUND_SWEEP_FRAMES`,
 `GAIN_GROUND_SWEEP_BOUNDS=x0,x1,y0,y1`, and the sweep window commands the
-script posts.
+script posts. The script also sets `GAIN_GROUND_DEFAULT_CONTROLS=1`, so the
+runtime uses the default key bindings it presses (F credit, Q start/attack) and
+neither reads nor overwrites the controls saved from Settings > Controls.
 
 It needs the imported ROM cache and the MSYS2 runtime DLLs, takes about ten
 seconds per stage plus the play time, and restarts the game after a runtime stop

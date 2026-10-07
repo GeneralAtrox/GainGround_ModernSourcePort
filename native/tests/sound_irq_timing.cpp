@@ -15,10 +15,12 @@ struct Probe {
 };
 int main() {
     struct Case { bool busy; unsigned priority; };
+    for (const bool native_clock : {false, true})
     for (const auto test : {Case{true, 0}, Case{false, 0},
                             Case{false, 0x8000}, Case{false, 0x0400}}) {
         const bool busy = test.busy;
         Probe p; p.host.attach_devices(p.devices);
+        if (native_clock) p.host.set_native_services([](void *) {}, nullptr);
         std::vector<std::uint8_t> ram(p.host.region_bytes(3).size());
         if (test.priority) {
             const auto word = [&](unsigned offset, unsigned value) {
@@ -53,7 +55,7 @@ int main() {
         bool preserved = r.data == saved.data;
         for (unsigned i=0; i<7; ++i) preserved &= r.address[i] == saved.address[i];
         const auto after = p.host.region_bytes(3);
-        std::cout << "busy=" << busy << " priority=" << test.priority << " elapsed=" << p.devices.time_ns()
+        std::cout << "native_clock=" << native_clock << " busy=" << busy << " priority=" << test.priority << " elapsed=" << p.devices.time_ns()
                   << " pc=" << std::hex << r.program_counter << std::dec << '\n';
         if (p.host.faulted() || result.status != TranslationStatus::complete || result.control != 2 ||
             r.program_counter != 0x80118 || r.status != 0x2015 || r.address[7] != 0xffff7ff6 ||
@@ -66,6 +68,7 @@ int main() {
             // The parent must charge its 222 entry + 168 exit clocks exactly
             // once, independently of the child's elapsed time.
             Probe child; child.host.attach_devices(child.devices);
+            if (native_clock) child.host.set_native_services([](void *) {}, nullptr);
             ram[0x37000] = 0; ram[0x37001] = 8;
             ram[0x37002] = 0x0f; ram[0x37003] = 0xbc;
             if (!child.host.load_region(3, 0, ram)) return 2;

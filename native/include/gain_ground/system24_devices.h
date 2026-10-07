@@ -13,6 +13,8 @@ public:
     std::optional<std::uint16_t> read(std::uint32_t address, std::uint16_t mask);
     bool write(std::uint32_t address, std::uint16_t value, std::uint16_t mask);
     std::uint8_t irq_level(unsigned cpu) const;
+    void use_native_events() noexcept { native_events_ = true; }
+    void acknowledge_native_event(unsigned service, unsigned level) noexcept;
     bool cpu_b_enabled() const { return (cnt_ & 2U) != 0; }
     void input(unsigned port, std::uint8_t bits, bool pressed);
     System24Audio audio;
@@ -29,5 +31,7 @@ private:
     std::uint64_t now_{}, scanline_{}, timer_sync_ns_{}, frc_reset_{};
     std::uint64_t timer_deadline_ns_{UINT64_MAX};
     bool vblank_{}, sprite_{};
+    bool native_events_{};
+    std::array<std::uint8_t, 2> native_pending_{};
 };
 } // namespace gain_ground

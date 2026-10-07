@@ -57,6 +57,14 @@ void System24Devices::advance(std::uint64_t ns)
         const auto beam = (line + 384U) % 424U;
         vblank_ = beam == 384U;
         sprite_ = beam == 0U;
+        if (native_events_) {
+            // Retain an event until its serial service runs, even when another
+            // service takes longer than the board's 41-us scanline pulse.
+            for (unsigned i = 0; i < native_pending_.size(); ++i) {
+                if (vblank_ && (enables_[i] & 8U)) native_pending_[i] |= 8U;
+                if (sprite_ && (enables_[i] & 16U)) native_pending_[i] |= 16U;
+            }
+        }
         scanline_ = line;
     }
     now_ = ns;
@@ -76,11 +84,23 @@ void System24Devices::input(unsigned port, std::uint8_t bits, bool pressed)
 }
 std::uint8_t System24Devices::irq_level(unsigned cpu) const
 {
+    if (native_events_) {
+        if (native_pending_[cpu] & 16U) return 5;
+        if (native_pending_[cpu] & 8U) return 4;
+        if (timer_pending_[cpu] && (enables_[cpu] & 4U)) return 3;
+        if (audio.irq() && (enables_[cpu] & 2U)) return 2;
+        return 0;
+    }
     if (sprite_ && (enables_[cpu] & 16)) return 5;
     if (vblank_ && (enables_[cpu] & 8)) return 4;
     if (timer_pending_[cpu] && (enables_[cpu] & 4)) return 3;
     if (audio.irq() && (enables_[cpu] & 2)) return 2;
     return 0;
+}
+void System24Devices::acknowledge_native_event(unsigned service, unsigned level) noexcept
+{
+    if (native_events_ && service < native_pending_.size() && (level == 4U || level == 5U))
+        native_pending_[service] &= static_cast<std::uint8_t>(~(1U << (level - 1U)));
 }
 std::optional<std::uint16_t> System24Devices::read(std::uint32_t address, std::uint16_t mask)
 {
