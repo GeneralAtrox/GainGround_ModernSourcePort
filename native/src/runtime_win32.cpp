@@ -1,6 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include "phangrade_session.hpp"
 #include <shellapi.h>
 #include <bcrypt.h>
 #include <mmsystem.h>
@@ -163,6 +164,7 @@ LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lp
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
 {
+    phangrade::Session session;
     gain_ground::RuntimePaths paths;
     const int startup = gain_ground::prepare_runtime_paths(paths, &matches_hash);
     if (startup != 1) return startup;
@@ -302,6 +304,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     app->window = window;
     { std::lock_guard lock(app->shared_lock); app->shared.pixels = app->video.pixels(); }
     ShowWindow(window, show);
+    session.attach(window);
     try {
         app->emulation = std::thread([runtime = app.get()] { runtime->emulation_main(); });
     } catch (const std::system_error &) {
