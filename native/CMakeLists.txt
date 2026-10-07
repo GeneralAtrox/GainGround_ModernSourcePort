@@ -466,3 +466,7 @@ add_test(
         --record 67742
 )
 endif()
+
+if(WIN32)
+    target_link_libraries(gain_ground_runtime PRIVATE comctl32)
+endif()
