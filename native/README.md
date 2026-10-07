@@ -6,6 +6,7 @@ research captures are required for compilation.
 | Directory or file | Responsibility |
 | --- | --- |
 | `src/runtime_win32.cpp` | Window, input, pause, scheduling and audio output |
+| `src/native_game_loop.cpp` | Single native frame loop and synchronous system/sound services |
 | `src/runtime_startup_win32.cpp` | First-run ROM picker and cache selection |
 | `src/rom_archive.cpp`, `src/rom_import.cpp` | ZIP/folder import and validated extraction |
 | `src/runtime_host.cpp` | Native dispatch, guest memory and runtime hooks |

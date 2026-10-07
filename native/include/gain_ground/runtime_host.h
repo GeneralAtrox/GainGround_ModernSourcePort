@@ -37,6 +37,14 @@ public:
     using Checkpoint = void (*)(void *);
     RuntimeHost();
     void set_checkpoint(Checkpoint callback, void *argument) noexcept;
+    // The playable native loop owns one clock and calls services synchronously.
+    // CPU/state tags remain only the ABI of retained translated routines.
+    void set_native_services(Checkpoint callback, void *argument) noexcept {
+        native_services_ = callback; native_services_argument_ = argument;
+    }
+    bool native_loop() const noexcept { return native_services_ != nullptr; }
+    unsigned selected_context() const noexcept { return selected_cpu_; }
+    void stop(std::string_view reason) { fail(reason); }
     bool load_region(std::uint16_t region, std::uint32_t offset,
                      std::span<const std::uint8_t> bytes);
     bool can_load_bus(std::uint32_t address, std::uint32_t bytes) const noexcept;
@@ -116,6 +124,9 @@ public:
     [[nodiscard]] const RuntimeFault &fault() const noexcept { return fault_; }
     [[nodiscard]] bool faulted() const noexcept { return !fault_.message.empty(); }
     [[nodiscard]] std::uint64_t execution_checkpoints() const noexcept { return operations_; }
+    // Native call nesting per CPU (diagnostics): current and highest seen.
+    [[nodiscard]] std::size_t call_depth(unsigned cpu) const noexcept { return cpu == selected_cpu_ ? depth_ : suspended_[cpu].depth; }
+    [[nodiscard]] std::size_t max_call_depth(unsigned cpu) const noexcept { return max_depth_[cpu]; }
     // Operations since the scheduler last (re)entered a CPU. The scheduler
     // yields a CPU after 4096; an in-place wait step counts as a re-entry so
     // the yield points stay where a real switch would have put them.
@@ -125,6 +136,15 @@ public:
     // deadline and switches back; a waiting CPU may take that step in place
     // when the other CPU cannot run first. Only that scheduler enables it.
     void set_direct_wait(bool on) noexcept { direct_wait_ = on; }
+    // Quantum scheduling: while its deadline stays before the slice end (the
+    // next device event, set by the scheduler), a timed CPU runs on its own
+    // clock instead of yielding at every bus cycle, and devices are brought up
+    // to that clock when it touches them. Interrupt and timer edges still land
+    // on slice boundaries; the CPUs see each other's memory writes up to one
+    // slice apart, except that a page both CPUs use, and every device access,
+    // is ordered exactly: the accessing CPU first waits until the other has
+    // reached the same time. 0, the default, keeps the strict interleave.
+    void set_slice_end(std::uint64_t ns) noexcept { slice_end_ = ns; }
     [[nodiscard]] const FunctionContext *active_context() const noexcept { return active_; }
     // IRQ lines are driven explicitly by device models, never by host wall time.
     void set_irq_line(std::uint8_t cpu, std::uint8_t level, bool asserted) noexcept;
@@ -182,8 +202,27 @@ private:
     std::uint64_t operations_{};
     std::uint64_t operations_since_switch_{};
     bool direct_wait_{};
+    std::uint64_t slice_end_{};
+    std::array<std::uint64_t,2> local_ns_{};
+    // Per 256-byte page of the regions both CPUs can reach: which CPUs have
+    // touched it. A page becomes ordered once both have; the video regions
+    // and CPU B's shared-RAM window start out ordered.
+    std::array<std::vector<std::uint8_t>, 12> page_users_{};
+    void sync_devices();
+    void sync_shared();
+    bool shared_page(std::uint16_t id, std::uint32_t offset) noexcept;
+    std::uint64_t committed_ns(unsigned cpu) const noexcept;
     std::size_t depth_{};
+    std::array<std::size_t,2> max_depth_{};
+    // Per CPU, the outermost live frame running the entry that resets the
+    // guest stack (CPU A 0x800c0, CPU B 0x8572). A later jump there unwinds
+    // to it (control 9) instead of nesting another native frame.
+    std::array<Invocation *,2> reset_anchor_{};
+    static bool stack_reset_entry(unsigned cpu, std::uint32_t pc) noexcept
+    { return cpu == 0U ? pc == 0x800c0U : pc == 0x8572U; }
     Checkpoint checkpoint_{};
+    Checkpoint native_services_{};
+    void *native_services_argument_{};
     void *checkpoint_argument_{};
     std::array<std::uint64_t,2> cpu_deadlines_{UINT64_MAX, UINT64_MAX};
     std::array<unsigned,2> timed_depth_{};

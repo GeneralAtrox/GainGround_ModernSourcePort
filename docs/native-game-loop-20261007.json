@@ -1,0 +1,237 @@
+{
+  "schema": "gain-ground-native-loop-validation",
+  "schemaVersion": 1,
+  "date": "2026-10-07",
+  "baseCommit": "44976acb882f5314ee02c0a887a6504520ab2a4e",
+  "sourceHashes": [
+    {
+      "path": "native/CMakeLists.txt",
+      "sha256": "bfb095589ef8505198c4ff04f5b6eb53f53be31408d41ad922b0a17cac135f8a"
+    },
+    {
+      "path": "native/include/gain_ground/native_game_loop.h",
+      "sha256": "44b50353290067e70d93b5387379eb1e2c095deb00412a343b7e48f9f73e0d10"
+    },
+    {
+      "path": "native/include/gain_ground/runtime_host.h",
+      "sha256": "5f5b8f6aa98648543af1e6997682cfb293b50c3f29efdbf35cc2e8c70765f3b0"
+    },
+    {
+      "path": "native/include/gain_ground/system24_devices.h",
+      "sha256": "ff43f9a2ff668f3dc50aad43a1f758e35d4b14ad27418bda161bf6a96d1eb8a9"
+    },
+    {
+      "path": "native/src/native_game_loop.cpp",
+      "sha256": "09a36763a8ab68b8eebd554f59aa29e30dbb46e0e6542dd5e496fecd77d82259"
+    },
+    {
+      "path": "native/src/runtime_host_clock.cpp",
+      "sha256": "b5d1eac5757f91fc486924a6fa74b7c62f6ae935486e1a8c61d5a7369838fd05"
+    },
+    {
+      "path": "native/src/runtime_host_hardware.cpp",
+      "sha256": "8649e1d09b8b4c788e09828e1d74adadcab1fb5d21eac37992a597dad0bfc741"
+    },
+    {
+      "path": "native/src/runtime_host_execution.cpp",
+      "sha256": "aa265ac3862566eab3858dbe10a3c59921670ac59a00005226da134256c7a82b"
+    },
+    {
+      "path": "native/src/system24_devices.cpp",
+      "sha256": "2544162388996586616c9b801febaf57750b72b237f973a6f2fc82332805e4f5"
+    },
+    {
+      "path": "native/src/runtime_win32.cpp",
+      "sha256": "d4063fa0db9ad8d96e2aa34fe20953dbe092835420ab9ae1393d1b1e875e7029"
+    },
+    {
+      "path": "native/src/runtime_win32_internal.h",
+      "sha256": "6209c0058bf7dfa3b63d12c3f2c2e1ddfc62da66c9eadd1872b510cdc5b95a1a"
+    },
+    {
+      "path": "native/src/runtime_win32_emulation.cpp",
+      "sha256": "93c3ef953af4e8142384c313c17c0260358df0a732d9eba1b849032f311af137"
+    },
+    {
+      "path": "native/src/runtime_win32_presentation.cpp",
+      "sha256": "bcf338e8a1a9e9cce9447cff35c5c69d810e99ecee563761f4580561a7ca4f34"
+    },
+    {
+      "path": "native/tests/native_loop_depth.cpp",
+      "sha256": "23f8e9d4b44da3ff2475029ca8cbafa3ac53ad803a8a25cb797fd2a19ae77182"
+    },
+    {
+      "path": "native/tests/native_loop_probe.cpp",
+      "sha256": "e241bf64c45c5a809108f43e40c5fc6141aa4077b675aa49b0645a3ed2196637"
+    },
+    {
+      "path": "native/tests/native_service_clock.cpp",
+      "sha256": "b820e4b3fcdae50c632c26db9ce81c79922a6b531e703b26fefa16b192f3153d"
+    },
+    {
+      "path": "native/tests/sound_irq_timing.cpp",
+      "sha256": "73ba5b080ba07f4067057ae0aeba897b3d5a9bdff2dd194ab7ef07bef625e43e"
+    },
+    {
+      "path": "native/src/translated/proven_static_cpu_b_72_0001f0da.cpp",
+      "sha256": "5a15f7e0d74c453c9643d91bc3ef76eaa1ff5a5a39f7e052ea73f486d2fedddd"
+    },
+    {
+      "path": "native/src/translated/proven_static_cpu_b_72_0001f0e6.cpp",
+      "sha256": "39ebb9af0d85cadc3d8c72cb7e0967ab58fa91369b7e255eff45698fa89329d9"
+    }
+  ],
+  "runtimeExecutableSha256": "35b047ce043e7315bb5f80b04da6c492025b4a6d1a9a3bda922bfda0055baa0a",
+  "checks": {
+    "releaseBuild": "passed",
+    "ctestPassed": 30,
+    "childBoundaryPassed": 15,
+    "stageCasesPassed": 40,
+    "stageGameUpdates": 15100,
+    "stageSystemSoundServices": 60321,
+    "characterCasesPassed": 60,
+    "crashRegression": "pre-repair body fails with call-depth stop at count 512; iterative body passes six counts through 65535 with depth 2",
+    "liveWin32": "35-second startup, credit, join, both attacks, pause/resume: no stop, zero reported starvation or dropped buffers",
+    "audioOriginal": {
+      "deviceNanoseconds": 33627406700,
+      "interleavedSamples": 4203314,
+      "nonzero": 3688305,
+      "peak": 5648,
+      "clipped": 0,
+      "starved": 0,
+      "dropped": 0,
+      "queueMs": [
+        40,
+        100
+      ]
+    },
+    "audioUserTitle": {
+      "deviceNanoseconds": 33627406700,
+      "interleavedSamples": 4203314,
+      "nonzero": 3709624,
+      "peak": 30938,
+      "clipped": 0,
+      "starved": 0,
+      "dropped": 0,
+      "queueMs": [
+        44,
+        148
+      ]
+    },
+    "render": "Round 1 Stage 1 visually inspected: actors, player, terrain, stage overlay and HUD present",
+    "renderSha256": "96fb38c25b63bdadfc78d46baa9d8a9415536c33932f041ac6f6601bc40dc311"
+  },
+  "limits": [
+    "Screenshot-only crash report: no exact input replay supplied.",
+    "Stage smoke used unlimited credits and invulnerability; no exhaustive full-game playthrough.",
+    "Legacy translated ABIs remain; independent CPU scheduling is removed in the playable runtime.",
+    "No subjective speaker listening assessment.",
+    "Native generation identity check fails as previously documented.",
+    "Function 609 has zero complete eligible fixtures; function 610 passes 11.",
+    "Aggregate fixtures stop at function 1 record 1 additional-call mismatch; no full arcade-parity sign-off."
+  ],
+  "evidence": [
+    {
+      "formerPath": ".tmp/native-loop-20261007/admission-build.log",
+      "sha256": "89c2bde64ec7169e348453e2356662db067c5d1f63d10e6325b56e55c068f478",
+      "bytes": 2365,
+      "resultText": "[33/34] Linking CXX executable gain_ground_player_start_input.exe\n[34/34] Linking CXX executable gain_ground_sound_instruction_timing.exe"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/admission-child-tests.log",
+      "sha256": "3690cb1a9981a696a10b9d4e50cc262f1b4b768e01b8d35ed1b57be9f4d92b16",
+      "bytes": 2407,
+      "resultText": "[0/1] C:\\WINDOWS\\system32\\cmd.exe /C \"cd /D C:\\Projects\\GainGround\\.tmp\\native-loop-20261007\\build && \"C:\\Program Files\\CMake\\bin\\ctest.exe\" --output-on-failure --no-tests=error --label-regex \"^native-child-boundary$\"\"\r\nTest project C:/Projects/GainGround/.tmp/native-loop-20261007/build\r\n      Start  2: gain_ground_native_loop_depth\r\n 1/15 Test  #2: gain_ground_native_loop_depth ............   Passed    0.38 sec\r\n      Start  7: gain_ground_audio_busy_deadline\r\n 2/15 Test  #7: gain_ground_audio_busy_deadline ..........   Passed    0.39 sec\r\n      Start  8: gain_ground_scene_child_timing\r\n 3/15 Test  #8: gain_ground_scene_child_timing ...........   Passed    0.34 sec\r\n      Start  9: gain_ground_sound_irq_timing\r\n 4/15 Test  #9: gain_ground_sound_irq_timing .............   Passed    0.36 sec\r\n      Start 10: gain_ground_enemy_navigation\r\n 5/15 Test #10: gain_ground_enemy_navigation .............   Passed    0.47 sec\r\n      Start 11: gain_ground_enemy_navigation_combat\r\n 6/15 Test #11: gain_ground_enemy_navigation_combat ......   Passed    0.32 sec\r\n      Start 14: gain_ground_nonlocal_actor_callers\r\n 7/15 Test #14: gain_ground_nonlocal_actor_callers .......   Passed    0.07 sec\r\n      Start 15: gain_ground_runtime_dispatch_repairs\r\n 8/15 Test #15: gain_ground_runtime_dispatch_repairs .....   Passed    0.05 sec\r\n      Start 16: gain_ground_coin_child_return\r\n 9/15 Test #16: gain_ground_coin_child_return ............   Passed    0.32 sec\r\n      Start 17: gain_ground_irq_child_return\r\n10/15 Test #17: gain_ground_irq_child_return .............   Passed    0.34 sec\r\n      Start 18: gain_ground_frame_wait_child_return\r\n11/15 Test #18: gain_ground_frame_wait_child_return ......   Passed    0.62 sec\r\n      Start 19: gain_ground_input_sampler_child_return\r\n12/15 Test #19: gain_ground_input_sampler_child_return ...   Passed    0.32 sec\r\n      Start 20: gain_ground_player_strip_bytes\r\n13/15 Test #20: gain_ground_player_strip_bytes ...........   Passed    0.48 sec\r\n      Start 21: gain_ground_controller_input\r\n14/15 Test #21: gain_ground_controller_input .............   Passed    0.05 sec\r\n      Start 22: gain_ground_player_start_input\r\n15/15 Test #22: gain_ground_player_start_input ...........   Passed    0.35 sec\r\n\r\n100% tests passed, 0 tests failed out of 15\r\n\r\nLabel Time Summary:\r\nnative-child-boundary    =   4.84 sec*proc (15 tests)\r\n\r\nTotal Test time (real) =   4.88 sec\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/admission-ctest.log",
+      "sha256": "d320b1751a753a6c2ec797570c2874deb0dfdbecf71768b57cf167264b1a37f0",
+      "bytes": 2304,
+      "resultText": "Test project C:/Projects/GainGround/.tmp/native-loop-20261007/build\r\n      Start  1: gain_ground_native_service_clock\r\n 1/15 Test  #1: gain_ground_native_service_clock ................   Passed    0.29 sec\r\n      Start  3: gain_ground_source_line_limit\r\n 2/15 Test  #3: gain_ground_source_line_limit ...................   Passed   15.41 sec\r\n      Start  4: gain_ground_video_transparency\r\n 3/15 Test  #4: gain_ground_video_transparency ..................   Passed    0.32 sec\r\n      Start  5: gain_ground_title_music\r\n 4/15 Test  #5: gain_ground_title_music .........................   Passed    0.03 sec\r\n      Start  6: gain_ground_system24_timer_deadline\r\n 5/15 Test  #6: gain_ground_system24_timer_deadline .............   Passed    0.05 sec\r\n      Start 12: gain_ground_stage_select\r\n 6/15 Test #12: gain_ground_stage_select ........................   Passed    0.34 sec\r\n      Start 13: gain_ground_title_coin_music\r\n 7/15 Test #13: gain_ground_title_coin_music ....................   Passed    0.35 sec\r\n      Start 23: gain_ground_frame_wait_timing\r\n 8/15 Test #23: gain_ground_frame_wait_timing ...................   Passed    0.28 sec\r\n      Start 24: gain_ground_interrupt_entry_timing\r\n 9/15 Test #24: gain_ground_interrupt_entry_timing ..............   Passed    0.29 sec\r\n      Start 25: gain_ground_state_step_child_return\r\n10/15 Test #25: gain_ground_state_step_child_return .............   Passed    0.32 sec\r\n      Start 26: gain_ground_sound_instruction_timing\r\n11/15 Test #26: gain_ground_sound_instruction_timing ............   Passed    0.30 sec\r\n      Start 27: gain_ground_system24_startup_devices\r\n12/15 Test #27: gain_ground_system24_startup_devices ............   Passed    0.29 sec\r\n      Start 28: gain_ground_checkpoint_writer_smoke\r\n13/15 Test #28: gain_ground_checkpoint_writer_smoke .............   Passed    0.05 sec\r\n      Start 29: gain_ground_function34_carry_path\r\n14/15 Test #29: gain_ground_function34_carry_path ...............   Passed    0.27 sec\r\n      Start 30: gain_ground_fixture_marker_compatibility_test\r\n15/15 Test #30: gain_ground_fixture_marker_compatibility_test ...   Passed    0.28 sec\r\n\r\n100% tests passed, 0 tests failed out of 15\r\n\r\nLabel Time Summary:\r\nnative-device-timing    =   0.05 sec*proc (1 test)\r\n\r\nTotal Test time (real) =  20.05 sec\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/before-depth.log",
+      "sha256": "e3d014843237307f2ae9f25beaf86d8ad01a3e49202deae3d032ffbad77fbf6f",
+      "bytes": 154,
+      "resultText": "loop count=0 depth=2 pass=1 fault=\r\nloop count=1 depth=3 pass=1 fault=\r\nloop count=512 depth=512 pass=0 fault=Native call depth exceeds runtime capacity\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/after-depth.log",
+      "sha256": "543611d0a692cccf8110167e083a78ea6c13e07912533aeb9f22b21c8e2dc182",
+      "bytes": 228,
+      "resultText": "loop count=0 depth=2 pass=1 fault=\r\nloop count=1 depth=2 pass=1 fault=\r\nloop count=512 depth=2 pass=1 fault=\r\nloop count=511 depth=2 pass=1 fault=\r\nloop count=65280 depth=2 pass=1 fault=\r\nloop count=65535 depth=2 pass=1 fault=\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/stages-final.log",
+      "sha256": "8d8b9ec0beddb5d3d2a9503a2cb77dbbd98e4d0051a01f320f33b6a1b631b0e9",
+      "bytes": 2787,
+      "resultText": "started=1 ns=2245435900 pc=8572 fault=\r\nstage=0 pass=1 applied=1 index=0 phase=0 player=5248 fault= pc=0\r\nstage=1 pass=1 applied=1 index=1 phase=0 player=5248 fault= pc=0\r\nstage=2 pass=1 applied=1 index=2 phase=0 player=5248 fault= pc=0\r\nstage=3 pass=1 applied=1 index=3 phase=0 player=5248 fault= pc=0\r\nstage=4 pass=1 applied=1 index=4 phase=0 player=5248 fault= pc=0\r\nstage=5 pass=1 applied=1 index=5 phase=0 player=5248 fault= pc=0\r\nstage=6 pass=1 applied=1 index=6 phase=0 player=5248 fault= pc=0\r\nstage=7 pass=1 applied=1 index=7 phase=0 player=5248 fault= pc=0\r\nstage=8 pass=1 applied=1 index=8 phase=0 player=5248 fault= pc=0\r\nstage=9 pass=1 applied=1 index=9 phase=0 player=5248 fault= pc=0\r\nstage=10 pass=1 applied=1 index=10 phase=0 player=5248 fault= pc=0\r\nstage=11 pass=1 applied=1 index=11 phase=0 player=5248 fault= pc=0\r\nstage=12 pass=1 applied=1 index=12 phase=0 player=5248 fault= pc=0\r\nstage=13 pass=1 applied=1 index=13 phase=0 player=5248 fault= pc=0\r\nstage=14 pass=1 applied=1 index=14 phase=0 player=5248 fault= pc=0\r\nstage=15 pass=1 applied=1 index=15 phase=0 player=5248 fault= pc=0\r\nstage=16 pass=1 applied=1 index=16 phase=0 player=5248 fault= pc=0\r\nstage=17 pass=1 applied=1 index=17 phase=0 player=5248 fault= pc=0\r\nstage=18 pass=1 applied=1 index=18 phase=0 player=5248 fault= pc=0\r\nstage=19 pass=1 applied=1 index=19 phase=0 player=5248 fault= pc=0\r\nstage=20 pass=1 applied=1 index=20 phase=0 player=5248 fault= pc=0\r\nstage=21 pass=1 applied=1 index=21 phase=0 player=5248 fault= pc=0\r\nstage=22 pass=1 applied=1 index=22 phase=0 player=5248 fault= pc=0\r\nstage=23 pass=1 applied=1 index=23 phase=0 player=5248 fault= pc=0\r\nstage=24 pass=1 applied=1 index=24 phase=0 player=5248 fault= pc=0\r\nstage=25 pass=1 applied=1 index=25 phase=0 player=5248 fault= pc=0\r\nstage=26 pass=1 applied=1 index=26 phase=0 player=5248 fault= pc=0\r\nstage=27 pass=1 applied=1 index=27 phase=0 player=5248 fault= pc=0\r\nstage=28 pass=1 applied=1 index=28 phase=0 player=5248 fault= pc=0\r\nstage=29 pass=1 applied=1 index=29 phase=0 player=5248 fault= pc=0\r\nstage=30 pass=1 applied=1 index=30 phase=0 player=5248 fault= pc=0\r\nstage=31 pass=1 applied=1 index=31 phase=0 player=5248 fault= pc=0\r\nstage=32 pass=1 applied=1 index=32 phase=0 player=5248 fault= pc=0\r\nstage=33 pass=1 applied=1 index=33 phase=0 player=5248 fault= pc=0\r\nstage=34 pass=1 applied=1 index=34 phase=0 player=5248 fault= pc=0\r\nstage=35 pass=1 applied=1 index=35 phase=0 player=5248 fault= pc=0\r\nstage=36 pass=1 applied=1 index=36 phase=0 player=5248 fault= pc=0\r\nstage=37 pass=1 applied=1 index=37 phase=0 player=5248 fault= pc=0\r\nstage=38 pass=1 applied=1 index=38 phase=0 player=5248 fault= pc=0\r\nstage=39 pass=1 applied=1 index=39 phase=0 player=5248 fault= pc=0\r\nstages passed=40/40 updates=15100 sound=60321\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/characters.log",
+      "sha256": "93e4a354ee3343ac8607ee740571e2ed9c48fcebb654b48fbeb2f4757b1d0180",
+      "bytes": 3810,
+      "resultText": "character=0 mode=movement\r\nPASS four directions\r\ncharacter=0 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=0 mode=secondary\r\nPASS 180 updates; callbacks 0x12058 0x12d14\r\ncharacter=1 mode=movement\r\nPASS four directions\r\ncharacter=1 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=1 mode=secondary\r\nPASS 180 updates; callbacks 0x12058 0x12d14\r\ncharacter=2 mode=movement\r\nPASS four directions\r\ncharacter=2 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=2 mode=secondary\r\nPASS 180 updates; callbacks 0x12058 0x12d14\r\ncharacter=3 mode=movement\r\nPASS four directions\r\ncharacter=3 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=3 mode=secondary\r\nPASS 180 updates; callbacks 0x12058 0x12d14\r\ncharacter=4 mode=movement\r\nPASS four directions\r\ncharacter=4 mode=primary\r\nPASS 180 updates; callbacks 0x12008 0x12cea\r\ncharacter=4 mode=secondary\r\nPASS 180 updates; callbacks 0x120ae\r\ncharacter=5 mode=movement\r\nPASS four directions\r\ncharacter=5 mode=primary\r\nPASS 180 updates; callbacks 0x12008 0x12cea\r\ncharacter=5 mode=secondary\r\nPASS 180 updates; callbacks 0x121f4 0x12d14\r\ncharacter=6 mode=movement\r\nPASS four directions\r\ncharacter=6 mode=primary\r\nPASS 180 updates; callbacks 0x12008 0x12cea\r\ncharacter=6 mode=secondary\r\nPASS 180 updates; callbacks 0x12346\r\ncharacter=7 mode=movement\r\nPASS four directions\r\ncharacter=7 mode=primary\r\nPASS 180 updates; callbacks 0x12008 0x12cea\r\ncharacter=7 mode=secondary\r\nPASS 180 updates; callbacks 0x123ea\r\ncharacter=8 mode=movement\r\nPASS four directions\r\ncharacter=8 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=8 mode=secondary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=9 mode=movement\r\nPASS four directions\r\ncharacter=9 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc\r\ncharacter=9 mode=secondary\r\nPASS 180 updates; callbacks 0x11fcc\r\ncharacter=10 mode=movement\r\nPASS four directions\r\ncharacter=10 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=10 mode=secondary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=11 mode=movement\r\nPASS four directions\r\ncharacter=11 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=11 mode=secondary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=12 mode=movement\r\nPASS four directions\r\ncharacter=12 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=12 mode=secondary\r\nPASS 180 updates; callbacks 0x1249c 0x12d14\r\ncharacter=13 mode=movement\r\nPASS four directions\r\ncharacter=13 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=13 mode=secondary\r\nPASS 180 updates; callbacks 0x1250a\r\ncharacter=14 mode=movement\r\nPASS four directions\r\ncharacter=14 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=14 mode=secondary\r\nPASS 180 updates; callbacks 0x12598\r\ncharacter=15 mode=movement\r\nPASS four directions\r\ncharacter=15 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=15 mode=secondary\r\nPASS 180 updates; callbacks 0x1264a\r\ncharacter=16 mode=movement\r\nPASS four directions\r\ncharacter=16 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=16 mode=secondary\r\nPASS 180 updates; callbacks 0x126b0 0x12dae\r\ncharacter=17 mode=movement\r\nPASS four directions\r\ncharacter=17 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=17 mode=secondary\r\nPASS 180 updates; callbacks 0x126b0 0x12dae\r\ncharacter=18 mode=movement\r\nPASS four directions\r\ncharacter=18 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=18 mode=secondary\r\nPASS 180 updates; callbacks 0x12742\r\ncharacter=19 mode=movement\r\nPASS four directions\r\ncharacter=19 mode=primary\r\nPASS 180 updates; callbacks 0x11fcc 0x12cea\r\ncharacter=19 mode=secondary\r\nPASS 180 updates; callbacks 0x12742\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/live-final-result.log",
+      "sha256": "48247b7e4fdda43c0a7e56799d18c50845e8c5d4300bdf788c0a84635d8a4f10",
+      "bytes": 706,
+      "resultText": "Live native runtime: startup, credit, join, both attacks, pause/resume, no stop\r\n\r\nprogress frame 0 checkpoints 849 updates 0 depth 0/0 max 0/0 audio min -1.0 max -1.0 ms starved 0 dropped 0 gap 4.6 lag 0.0 ms slipped 0 busy 2%\r\nprogress frame 600 checkpoints 16645915 updates 231 depth 0/1 max 9/20 audio min 44.0 max 101.5 ms starved 0 dropped 0 gap 9.6 lag 0.0 ms slipped 0 busy 27%\r\nprogress frame 1200 checkpoints 33911197 updates 531 depth 0/1 max 9/22 audio min 38.1 max 70.1 ms starved 0 dropped 0 gap 12.1 lag 0.0 ms slipped 0 busy 25%\r\nprogress frame 1800 checkpoints 51274422 updates 831 depth 0/1 max 9/22 audio min 49.6 max 69.8 ms starved 0 dropped 0 gap 6.9 lag 0.0 ms slipped 0 busy 26%\r\n\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/audio-play.log",
+      "sha256": "1855bc853b5706118920455d8b3a0fb630b57a2700a685791f49dfeefb110011",
+      "bytes": 303,
+      "resultText": "started=1 ns=2245435900 pc=8572 fault=\r\nupdate=0 frame=129\r\nupdate=100 frame=329\r\nupdate=200 frame=536\r\nupdate=300 frame=736\r\nupdate=400 frame=936\r\nupdate=500 frame=1136\r\nupdate=600 frame=1336\r\nupdate=700 frame=1536\r\nupdate=800 frame=1736\r\nWaveOut frames=1962581 starved=1 dropped=3 queue_ms=0,200.208\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/audio-default-final.log",
+      "sha256": "0ed2d95dd63782a8c02c32e817587f68fc070fd255b92c1917974afdab2dabc5",
+      "bytes": 306,
+      "resultText": "started=1 ns=2245435900 pc=8572 fault=\r\nupdate=0 frame=129\r\nupdate=100 frame=329\r\nupdate=200 frame=536\r\nupdate=300 frame=736\r\nupdate=400 frame=936\r\nupdate=500 frame=1136\r\nupdate=600 frame=1336\r\nupdate=700 frame=1536\r\nupdate=800 frame=1736\r\nWaveOut frames=1986145 starved=24 dropped=712 queue_ms=0,152.032\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/audio-default-admission.log",
+      "sha256": "706243e45f290aa9fde2e235391250182e255b5db1ba62ef37b008c71da812f3",
+      "bytes": 432,
+      "resultText": "started=1 ns=2245435900 pc=8572 fault=\r\nupdate=0 frame=129\r\nupdate=100 frame=329\r\nupdate=200 frame=536\r\nupdate=300 frame=736\r\nupdate=400 frame=936\r\nupdate=500 frame=1136\r\nupdate=600 frame=1336\r\nupdate=700 frame=1536\r\nupdate=800 frame=1736\r\nWaveOut frames=2104157 starved=0 dropped=0 queue_ms=40,100\r\nupdates=899 sound=3826 ns=33627406700 samples=4203314 nonzero=3688305 clipped=0 peak=5648 depth=22 fault= pc=0 function=4294967295\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/audio-replacement.log",
+      "sha256": "d2473b9739f9d23aebc8395e1303ec139a569af145583c6e142665a8823e36a6",
+      "bytes": 433,
+      "resultText": "started=1 ns=2245435900 pc=8572 fault=\r\nupdate=0 frame=129\r\nupdate=100 frame=329\r\nupdate=200 frame=536\r\nupdate=300 frame=736\r\nupdate=400 frame=936\r\nupdate=500 frame=1136\r\nupdate=600 frame=1336\r\nupdate=700 frame=1536\r\nupdate=800 frame=1736\r\nWaveOut frames=2104157 starved=0 dropped=0 queue_ms=44,148\r\nupdates=899 sound=3826 ns=33627406700 samples=4203314 nonzero=3709624 clipped=0 peak=30938 depth=22 fault= pc=0 function=4294967295\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/generation-check.log",
+      "sha256": "d3b7aa135d98bcb0d8585298c46521fcddca68eb9308229f5c85c3ef92d4c2b1",
+      "bytes": 73,
+      "resultText": "ERROR: Function contract identity differs without a compatibility proof\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/fixture609.json",
+      "sha256": "5edc5103ea8c7f3fb32fc5602d6400496d81e018d34ee7a666bee3d57db1fe59",
+      "bytes": 1075,
+      "resultText": "{\r\n  \"schema\": \"gground-native-fixture-batch-comparison\",\r\n  \"schemaVersion\": 1,\r\n  \"status\": \"diverged\",\r\n  \"functions\": {\r\n    \"selected\": 1,\r\n    \"implemented\": 1,\r\n    \"passed\": 0,\r\n    \"unimplemented\": 0,\r\n    \"diverged\": 1\r\n  },\r\n  \"fixtures\": {\r\n    \"selected\": 0,\r\n    \"executed\": 0,\r\n    \"passed\": 0,\r\n    \"unimplemented\": 0,\r\n    \"diverged\": 0\r\n  },\r\n  \"compatibilityRuleHitCount\": 0,\r\n  \"compatibilityRuleCounts\": {},\r\n  \"compatibilityRuleHits\": [],\r\n  \"stoppedAtFirstFailure\": true,\r\n  \"firstFailure\": {\r\n  \"schema\": \"gground-native-fixture-comparison\",\r\n  \"schemaVersion\": 1,\r\n  \"status\": \"diverged\",\r\n  \"fixtureRecord\": 0,\r\n  \"sourceIndex\": 0,\r\n  \"sourceFixtureOrdinal\": 0,\r\n  \"functionId\": 609,\r\n  \"functionLabel\": \"proven_static_cpu_b_72_0001f0da\",\r\n  \"checkpointMask\": \"0x00000000\",\r\n  \"checkpointKinds\": [],\r\n  \"compatibilityRuleHitCount\": 0,\r\n  \"compatibilityRuleCounts\": {},\r\n  \"firstDivergence\": {\r\n    \"subsystem\": \"fixture\",\r\n    \"field\": \"count\",\r\n    \"expected\": \"at least one complete fixture\",\r\n    \"actual\": \"0\",\r\n    \"sequence\": null\r\n  }\r\n}\r\n}\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/fixture610.json",
+      "sha256": "5a7e24b1beba0c4c4ea4ffbae3caf7cc87c2c31262600815642ab7ed2daa1f7b",
+      "bytes": 525,
+      "resultText": "{\r\n  \"schema\": \"gground-native-fixture-batch-comparison\",\r\n  \"schemaVersion\": 1,\r\n  \"status\": \"passed\",\r\n  \"functions\": {\r\n    \"selected\": 1,\r\n    \"implemented\": 1,\r\n    \"passed\": 1,\r\n    \"unimplemented\": 0,\r\n    \"diverged\": 0\r\n  },\r\n  \"fixtures\": {\r\n    \"selected\": 11,\r\n    \"executed\": 11,\r\n    \"passed\": 11,\r\n    \"unimplemented\": 0,\r\n    \"diverged\": 0\r\n  },\r\n  \"compatibilityRuleHitCount\": 0,\r\n  \"compatibilityRuleCounts\": {},\r\n  \"compatibilityRuleHits\": [],\r\n  \"stoppedAtFirstFailure\": false,\r\n  \"firstFailure\": null\r\n}\r\n"
+    },
+    {
+      "formerPath": ".tmp/native-loop-20261007/corpus.json",
+      "sha256": "f1a9d175955afd9694d2c5574073fce29f6830e02f5098c391d739c949103bbf",
+      "bytes": 1046,
+      "resultText": "{\r\n  \"schema\": \"gground-native-fixture-batch-comparison\",\r\n  \"schemaVersion\": 1,\r\n  \"status\": \"diverged\",\r\n  \"functions\": {\r\n    \"selected\": 2,\r\n    \"implemented\": 2,\r\n    \"passed\": 1,\r\n    \"unimplemented\": 0,\r\n    \"diverged\": 1\r\n  },\r\n  \"fixtures\": {\r\n    \"selected\": 3,\r\n    \"executed\": 2,\r\n    \"passed\": 1,\r\n    \"unimplemented\": 0,\r\n    \"diverged\": 1\r\n  },\r\n  \"compatibilityRuleHitCount\": 0,\r\n  \"compatibilityRuleCounts\": {},\r\n  \"compatibilityRuleHits\": [],\r\n  \"stoppedAtFirstFailure\": true,\r\n  \"firstFailure\": {\r\n  \"schema\": \"gground-native-fixture-comparison\",\r\n  \"schemaVersion\": 1,\r\n  \"status\": \"diverged\",\r\n  \"fixtureRecord\": 1,\r\n  \"sourceIndex\": 2,\r\n  \"sourceFixtureOrdinal\": 59,\r\n  \"functionId\": 1,\r\n  \"functionLabel\": \"cpu_a_reset_entry\",\r\n  \"checkpointMask\": \"0x00000000\",\r\n  \"checkpointKinds\": [],\r\n  \"compatibilityRuleHitCount\": 0,\r\n  \"compatibilityRuleCounts\": {},\r\n  \"firstDivergence\": {\r\n    \"subsystem\": \"call\",\r\n    \"field\": \"count\",\r\n    \"expected\": \"3\",\r\n    \"actual\": \"additional call\",\r\n    \"sequence\": 7359792\r\n  }\r\n}\r\n}\r\n"
+    }
+  ],
+  "cleanup": {
+    "root": "C:\\Projects\\GainGround\\.tmp\\native-loop-20261007",
+    "status": "removed-and-verified",
+    "retainedTestBinaries": false,
+    "method": "Exact literal path, no force; verified inside workspace, zero reparse points and no running task executables. Initial forced cleanup was rejected by automatic approval review; safer deletion succeeded."
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "updated": "2026-09-28",
+  "status": "complete",
+  "objective": "Replace mechanical source chunks with complete native declarations and helper modules while keeping project-owned native source files at or below 400 physical lines.",
+  "inputCheckpoint": {
+    "originalPath": ".tmp/source-split-20260927/source-checkpoint.zip",
+    "sha256": "c8b388b71fe242305560818c0af9b8b4bd42cfd180a91814cc64904fd88198b3",
+    "sourceInputsOriginalPath": ".tmp/source-split-20260927/source-inputs.json",
+    "sourceInputsSha256": "090d691e9c3a8759f7cac35d7038bfa80b12e272510f3e6a4b10c4287a436447",
+    "retainedHashInventory": "AgentState/source-line-split-integration/source-inputs.json",
+    "retainedAffectedOwnerList": "AgentState/source-line-split-integration/split-paths.json",
+    "sourceArchiveRetained": false
+  },
+  "layout": {
+    "splitter": {
+      "path": "scripts/native_source_layout.py",
+      "sha256": "a8922bddad1fae04271ccb174aa54f94bfe19ed9eb0e7a50eb82d1cfac66ea09"
+    },
+    "tests": {
+      "path": "scripts/test_native_source_layout.py",
+      "sha256": "42476103a8769209b16d2ff7e08f396781cd8fd944d8c65509cacde24735fc73"
+    },
+    "arrayComposer": {
+      "path": "native/include/gain_ground/source_layout_detail.h",
+      "sha256": "84a2572e7f8de438a1a5129de3d7761e7902b698bf4a3e1b2f41de1de15d4aac"
+    },
+    "lineGuardCommand": "cmake -DSOURCE_ROOT=native -P native/CheckSourceLineLimit.cmake",
+    "lineGuardResult": {
+      "status": "passed",
+      "physicalFiles": 1177,
+      "maximumLines": 399,
+      "failures": 0,
+      "scope": ["native/src", "native/include", "native/generated"]
+    },
+    "mechanicalPartFragments": 0,
+    "semanticModuleFragments": 321
+  },
+  "generatedOwners": {
+    "orderedArrayBatching": true,
+    "sharedHeaderGuardsOnWrappers": true,
+    "pcBlockInventory": {
+      "native/generated/gground_stage_callbacks.cpp": {
+        "checkpointLabels": 6518,
+        "currentLabels": 6518,
+        "sameSortedMultiset": true
+      },
+      "native/src/translated/cpu_b_stage_gap_callbacks.cpp": {
+        "checkpointLabels": 1313,
+        "currentLabels": 1313,
+        "sameSortedMultiset": true
+      }
+    },
+    "privateGameDefinitionModules": {
+      "pattern": "native/generated/gground_game_definitions.module*.inc",
+      "fileCount": 8,
+      "allIgnored": true,
+      "allDeniedBySourcePackageAllowlist": true
+    }
+  },
+  "validation": {
+    "sourceLayoutUnitTests": {
+      "command": "python -m unittest test_native_source_layout -v (working directory: scripts)",
+      "passed": 8,
+      "skipped": 1,
+      "skipReason": "Standalone g++ unavailable; integrated CMake build compiled generated C++"
+    },
+    "fixtureMarkerGeneratorCheck": "passed",
+    "sourcePackageAudit": {
+      "status": "passed",
+      "errors": 0,
+      "trackedFiles": 832,
+      "nativeCodeFiles": 792,
+      "over400VendoredYmfmFiles": 4
+    },
+    "cpuATranslationUnits": "9/9 compiled with -Wall -Wextra -Wpedantic -Werror",
+    "cpuBTranslationUnits": "55/55 compiled with -std=c++20 -O3 -DNDEBUG -Wall -Wextra -Wpedantic -Werror",
+    "fullCMakeBuild": "passed; gain_ground_runtime.exe linked",
+    "ctest": {
+      "passed": 28,
+      "failed": 0,
+      "evidencePath": "AgentState/cpu-b-luna6-w3/EVIDENCE.md",
+      "evidenceSha256": "635ce174e63ba772939acc9018b11dde70dcc597c32c58df7683bb58c483e19f",
+      "scratchBuildRemoved": true
+    },
+    "codegenCheck": {
+      "result": "blocked by pre-existing contract identity failure",
+      "message": "Function contract identity differs without a compatibility proof",
+      "baselineLogOriginalPath": ".tmp/source-split-20260927/baseline-codegen.log",
+      "baselineLogRetained": false,
+      "contractMetadataChanged": false
+    }
+  },
+  "baseline": {
+    "buildSteps": "759/759 passed",
+    "ctest": "27/27 passed",
+    "testXmlSha256": "07cd53c3d1222ce346a9da9b145a7f8ae56665358b987d8b8aa8e937af8747d8",
+    "codegenFailure": "Function contract identity differs without a compatibility proof",
+    "codegenLogSha256": "d3b7aa135d98bc0b0d8585298c46521fcddca68eb9308229f5c85c3ef92d4c2b1"
+  },
+  "limitations": [
+    "PC-label multiset checks establish case-label inventory retention, not arbitrary-input behavioral equivalence.",
+    "The standalone g++-based unit is skipped in the default shell; the integrated MSYS2 CMake build compiled the generated sources.",
+    "No new exact-parity capture campaign was performed."
+  ],
+  "scratchCleanup": {
+    "path": "C:/Projects/GainGround/.tmp/source-split-20260927",
+    "targetVerifiedWithinWorkspace": true,
+    "reparsePoints": 0,
+    "activeBuildProcesses": 0,
+    "removedWithoutForce": true,
+    "existsAfterCleanup": false
+  }
+}

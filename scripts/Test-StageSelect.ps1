@@ -35,10 +35,13 @@ Add-Type -Namespace GgWin -Name Native -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool PostMessageW(IntPtr h, uint msg, IntPtr w, IntPtr l);
 '@
 $WM_KEYDOWN = 0x100; $WM_KEYUP = 0x101; $WM_COMMAND = 0x111
-$VK_5 = 0x35; $VK_Z = 0x5A; $StageCommandBase = 2000
+# Default bindings (F credit, Q attack/join); GAIN_GROUND_DEFAULT_CONTROLS below
+# makes the runtime ignore controls remapped in Settings > Controls.
+$VK_F = 0x46; $VK_Q = 0x51; $StageCommandBase = 2000
 
 if (Test-Path $Log) { Remove-Item $Log -Force }
 $env:GAIN_GROUND_NAV_LOG = $Log
+$env:GAIN_GROUND_DEFAULT_CONTROLS = '1'
 if ($Sweep) { $env:GAIN_GROUND_TEST_SPEED = [string]$Speed; $env:GAIN_GROUND_INVULNERABLE = '1'; $env:GAIN_GROUND_SWEEP_FRAMES = [string]$SweepFrames }
 else { Remove-Item Env:GAIN_GROUND_TEST_SPEED, Env:GAIN_GROUND_INVULNERABLE -ErrorAction SilentlyContinue }
 $SweepStartCommand = 3001
@@ -61,8 +64,8 @@ function Start-Game {
     for ($i = 0; $i -lt 100 -and $script:window -eq [IntPtr]::Zero; $i++) { Start-Sleep -Milliseconds 200; $script:process.Refresh(); $script:window = $script:process.MainWindowHandle }
     if ($script:window -eq [IntPtr]::Zero) { Stop-Game; throw 'Runtime window did not appear' }
     Start-Sleep -Seconds 6            # logo and boot to the title
-    Key $VK_5; Key $VK_5              # two credits
-    Key $VK_Z 200; Start-Sleep -Seconds 2; Key $VK_Z 200   # start, pick the first character
+    Key $VK_F; Key $VK_F              # two credits
+    Key $VK_Q 200; Start-Sleep -Seconds 2; Key $VK_Q 200   # start, pick the first character
     Start-Sleep -Seconds 2
 }
 function LogLines { if (Test-Path $Log) { @(Get-Content $Log -ErrorAction SilentlyContinue) } else { @() } }
@@ -91,11 +94,11 @@ function FaultSummary {
 # and rejoin so the next selection still has a game to act on.
 function Recover-Game {
     $before = (LogLines).Count
-    Key $VK_5; Key $VK_Z 200                       # credit, continue
+    Key $VK_F; Key $VK_Q 200                       # credit, continue
     # The continue leaves phase 4 for play (c16 4 -> 0); then pick a character.
     $back = WaitForLine 'offset 00c16 0004 -> 0000' $before 8
     if ($back -lt 0) { Start-Sleep -Seconds 2 }
-    Start-Sleep -Seconds 2; Key $VK_Z 200; Start-Sleep -Milliseconds 400; Key $VK_Z 200; Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 2; Key $VK_Q 200; Start-Sleep -Milliseconds 400; Key $VK_Q 200; Start-Sleep -Seconds 2
 }
 
 Start-Game
@@ -128,7 +131,7 @@ for ($stage = $From; $stage -le $To; $stage++) {
             $detail += 'clear->init {0} frames' -f ((Frame $lines[$init]) - (Frame $lines[$clearLine]))
             $initFrame = Frame $lines[$init]
             Start-Sleep -Seconds 3            # stage title card
-            Key $VK_Z 200; Start-Sleep -Milliseconds 400; Key $VK_Z 200   # character select -> spawn
+            Key $VK_Q 200; Start-Sleep -Milliseconds 400; Key $VK_Q 200   # character select -> spawn
             if ($Sweep) {
                 Start-Sleep -Seconds 1
                 $sweepStart = (LogLines).Count
@@ -141,7 +144,7 @@ for ($stage = $From; $stage -le $To; $stage++) {
                 } elseif ($sweepEnd -eq -1) { $status = 'fail'; $detail += '; sweep did not finish' }
             } else {
                 $playUntil = (Get-Date).AddSeconds($PlaySeconds)
-                while ((Get-Date) -lt $playUntil) { Key $VK_Z 80 }
+                while ((Get-Date) -lt $playUntil) { Key $VK_Q 80 }
             }
             Start-Sleep -Milliseconds 700     # let a failure report land
             $script:process.Refresh()

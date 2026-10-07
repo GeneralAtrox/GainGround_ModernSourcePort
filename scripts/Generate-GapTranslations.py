@@ -21,6 +21,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from native_source_layout import factor_large_pc_membership_switches, read_source, write_source
 
 try:
     from capstone import Cs, CS_ARCH_M68K, CS_MODE_M68K_000
@@ -46,13 +47,13 @@ MASK = {1: '0xffU', 2: '0xffffU', 4: '0xffffffffU'}
 
 def load_registry(functions_header: Path, registry_header: Path, extra_headers):
     registered = {}
-    text = functions_header.read_text(encoding='utf-8', errors='replace')
+    text = read_source(functions_header)
     for m in re.finditer(r'FunctionContract\{ (\d+)U, 1U, 0x72U, true, true, 0x0*([0-9a-f]+)U', text):
         registered[int(m.group(2), 16)] = int(m.group(1))
     for header in [registry_header, *extra_headers]:
         if not header.exists():
             continue
-        text = header.read_text(encoding='utf-8', errors='replace')
+        text = read_source(header)
         for m in re.finditer(r'\{(\d+)U, 0x0*([0-9a-f]+)U, 0x0*[0-9a-f]+U, "', text):
             registered[int(m.group(2), 16)] = int(m.group(1))
         for m in re.finditer(r'FunctionContract\{(\d+)U, 1U, 0x72U, false, true, 0x0*([0-9a-f]+)U', text):
@@ -515,7 +516,7 @@ class Translator:
         for entry in sorted(self.functions):
             parts.append(self.emit_function(entry)); parts.append('')
         parts.append('} // namespace gain_ground::translated')
-        return '\n'.join(parts) + '\n'
+        return factor_large_pc_membership_switches('\n'.join(parts) + '\n')
 
     def emit_header(self):
         lines = ['#pragma once',
@@ -556,8 +557,8 @@ def main():
     registered = load_registry(Path(args.functions), Path(args.registry), [])
     tr = Translator(data, registered, args.first_id, 'native/src/translated/cpu_b_stage_gap_callbacks.cpp')
     tr.run([int(e, 16) for e in args.entries])
-    Path(args.out_cpp).write_text(tr.emit_cpp(), encoding='utf-8', newline='\n')
-    Path(args.out_header).write_text(tr.emit_header(), encoding='utf-8', newline='\n')
+    write_source(Path(args.out_cpp), tr.emit_cpp())
+    write_source(Path(args.out_header), tr.emit_header())
     for entry in sorted(tr.functions):
         f = tr.functions[entry]
         print(f'{entry:05x} -> id {f["id"]} {f["name"]}: {len(f["insns"])} instructions, body to {f["body_max"]:05x}')

@@ -113,6 +113,7 @@ inline FunctionResult service_cpu_a_autovector(FunctionContext &context,
             continue;
         const auto child = host.call_function(function.id, 0U, 0xffU, 3U, site, target, context);
         if (child.status != TranslationStatus::complete) return child;
+        if (child.control == 9U) return child; // Stack reset: unwinding past the ISR.
         if (child.control != 2U || child.exit_program_counter != resume ||
             context.registers.program_counter != resume || context.state != 0xffU)
             return {TranslationStatus::contract_violation, child.control,
