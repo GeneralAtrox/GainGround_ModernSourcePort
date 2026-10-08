@@ -20,7 +20,7 @@ class Session {
   HMENU menu_{}, bar_{};
   Audio audio_;
   int volume_ = 25;
-  bool fullscreen_{}, restoring_{}, closing_{};
+  bool fullscreen_{}, restoring_{}, closing_{}, maximize_on_show_{};
   DWORD style_{};
   WINDOWPLACEMENT placement_{};
   std::function<bool()> get_fullscreen_;
@@ -40,7 +40,7 @@ class Session {
     return get_fullscreen_ ? get_fullscreen_() : fullscreen_;
   }
   void capture() {
-    if (!window_ || restoring_ || closing_ || IsIconic(window_)) {
+    if (!window_ || restoring_ || closing_ || maximize_on_show_ || IsIconic(window_)) {
       return;
     }
     const bool full = fullscreen();
@@ -157,6 +157,18 @@ class Session {
     if (msg == WM_CLOSE) {
       self.closing_ = true;
     }
+    if (msg == WM_WINDOWPOSCHANGED && self.maximize_on_show_ &&
+        (reinterpret_cast<const WINDOWPOS *>(l)->flags & SWP_SHOWWINDOW)) {
+      // Let the framework finish showing the window first: SDL restores a window it
+      // did not maximize itself when it is shown, so maximize only afterwards.
+      const auto result = DefSubclassProc(hwnd, msg, w, l);
+      self.maximize_on_show_ = false;
+      if (!self.fullscreen()) {
+        ShowWindow(hwnd, SW_SHOWMAXIMIZED);
+      }
+      self.capture();
+      return result;
+    }
     if (msg == WM_DESTROY) {
       self.tick();
       KillTimer(hwnd, identity);
@@ -224,7 +236,15 @@ public:
       placement_.showCmd = show == SW_SHOWMAXIMIZED ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL;
       placement_.flags = 0;
       // Windows adjusts placement to an available monitor if one was removed.
+      // A window that is still hidden keeps its normal size until it is shown.
+      maximize_on_show_ = placement_.showCmd == SW_SHOWMAXIMIZED && !IsWindowVisible(window_);
+      if (maximize_on_show_) {
+        placement_.showCmd = SW_HIDE;
+      }
       SetWindowPlacement(window_, &placement_);
+      if (maximize_on_show_) {
+        placement_.showCmd = SW_SHOWMAXIMIZED;
+      }
       restore_full = full != 0;
     }
     bar_ = GetMenu(window_);
