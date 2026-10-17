@@ -6,11 +6,13 @@ void RuntimeWindow::save_failure(){
         // Host-side snapshot after the native continuation yielded: no guest reads,
         // calls or debugger expressions execute in the failed context.
         std::error_code ec;
-        const auto directory = std::filesystem::path(L"run") / L"last-native-failure";
+        const auto &directory = failure_directory;
+        const auto message = status();
+        gain_ground::runtime_log(L"Stopped: " + message);
         std::filesystem::create_directories(directory, ec);
         if (ec) return;
+        gain_ground::runtime_log(L"Failure snapshot: " + std::filesystem::absolute(directory, ec).wstring());
         std::ofstream report(directory / L"status.txt");
-        const auto message = status();
         report << std::string(message.begin(), message.end()) << '\n'
                << "emulated_ns=" << emulated_ns << " frame=" << devices.frame() << '\n';
         {

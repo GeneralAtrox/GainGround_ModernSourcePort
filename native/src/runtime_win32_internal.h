@@ -165,6 +165,8 @@ struct RuntimeWindow {
     struct InputObservation { std::uint64_t ns, frame; unsigned key; bool pressed; };
     std::vector<InputObservation> input_history;
     bool failure_saved{};
+    // Snapshot of the first fault; under the data directory when one was chosen.
+    std::filesystem::path failure_directory{std::filesystem::path(L"run") / L"last-native-failure"};
     std::chrono::steady_clock::time_point paused_at{};
 
     // Threads. The game thread owns the native loop, services, audio

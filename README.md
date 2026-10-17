@@ -72,6 +72,14 @@ Advanced local research can still use:
 .\build\gain_ground_runtime.exe --bios C:\local-data\cpu_a_program.bin --assets C:\local-data\assets
 ```
 
+`--data-directory <directory>` (in any position, with or without `--bios` and
+`--assets`) replaces `%LOCALAPPDATA%\GainGround` below and creates the directory.
+Everything the game writes then stays inside it: the ROM cache, `controls.ini`,
+`logs\gain_ground.log` (startup, fatal errors and exit code, replaced on each
+run) and the failure snapshot `logs\last-native-failure\`. Without the option
+the snapshot goes to `run\last-native-failure\` under the working directory and
+no log is written.
+
 ## Controls and local presentation
 
 Three players share the stage. Keyboard controls player 1; Xbox controllers 1-3
