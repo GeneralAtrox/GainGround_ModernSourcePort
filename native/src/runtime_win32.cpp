@@ -173,17 +173,18 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     const auto &character_path = paths.characters;
     std::ifstream input(bios_path, std::ios::binary | std::ios::ate);
     if (!input || input.tellg() != std::streampos(0x40000)) {
-        MessageBoxW(nullptr, L"Cannot read the 256 KiB CPU-A BIOS image.", L"Gain Ground", MB_OK | MB_ICONERROR);
+        gain_ground::report_error(L"Cannot read the 256 KiB CPU-A BIOS image.", L"Gain Ground");
         return 2;
     }
     input.seekg(0);
     std::vector<std::uint8_t> bios(0x40000U);
     input.read(reinterpret_cast<char *>(bios.data()), static_cast<std::streamsize>(bios.size()));
     if (!input || !matches_hash(bios, kBiosSha256)) {
-        MessageBoxW(nullptr, L"CPU-A ROM identity differs from the original image used by the native translation.", L"Gain Ground", MB_OK | MB_ICONERROR);
+        gain_ground::report_error(L"CPU-A ROM identity differs from the original image used by the native translation.", L"Gain Ground");
         return 2;
     }
     auto app = std::make_unique<RuntimeWindow>();
+    if (paths.chosen_data_directory) app->failure_directory = paths.user_data / L"logs" / L"last-native-failure";
     // Test aids from the environment; absent variables leave normal play untouched.
     if (const char *value = std::getenv("GAIN_GROUND_TEST_SPEED"); value && *value) {
         const auto requested = std::strtod(value, nullptr);
@@ -207,7 +208,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
         std::string error;
         if (!app->host.load_character_definitions(character_path, error)) {
             const std::wstring message(error.begin(), error.end());
-            MessageBoxW(nullptr, message.c_str(), L"Gain Ground characters", MB_OK | MB_ICONERROR);
+            gain_ground::report_error(message.c_str(), L"Gain Ground characters");
             return 2;
         }
     }
@@ -235,29 +236,29 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     } catch (const std::exception &e) {
         const std::string text = e.what();
         const std::wstring message(text.begin(), text.end());
-        MessageBoxW(nullptr, message.c_str(), L"Gain Ground timing trace", MB_OK | MB_ICONERROR);
+        gain_ground::report_error(message.c_str(), L"Gain Ground timing trace");
         return 2;
     }
     if (!app->assets.open(asset_path, &matches_hash)) {
         const auto &error = app->assets.error();
         const std::wstring message(error.begin(), error.end());
-        MessageBoxW(nullptr, message.c_str(), L"Gain Ground assets", MB_OK | MB_ICONERROR);
+        gain_ground::report_error(message.c_str(), L"Gain Ground assets");
         return 2;
     }
     if (!app->host.load_region(1U, 0U, bios)) return 2;
     gain_ground::FunctionContext loading_context;
     if (!app->host.prepare_direct_boot(app->assets, loading_context)) {
-        MessageBoxW(nullptr, L"Cannot initialize direct asset loading.", L"Gain Ground", MB_OK | MB_ICONERROR);
+        gain_ground::report_error(L"Cannot initialize direct asset loading.", L"Gain Ground");
         return 2;
     }
     app->host.prepare_sega_logo();
     app->video.render(app->host);
     if (!app->output.open()) {
-        MessageBoxW(nullptr, L"Cannot open stereo audio output.", L"Gain Ground", MB_OK | MB_ICONERROR);
+        gain_ground::report_error(L"Cannot open stereo audio output.", L"Gain Ground");
         return 2;
     }
-    if (app->host.faulted()) return 2;
-    if (!app->wake) return 2;
+    if (app->host.faulted()) { gain_ground::runtime_log("Startup failed: the game faulted before the window opened"); return 2; }
+    if (!app->wake) { gain_ground::runtime_log("Startup failed: cannot create the wake event"); return 2; }
     WNDCLASSW klass{};
     klass.lpfnWndProc = &window_proc;
     klass.hInstance = instance;
@@ -319,5 +320,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     }
     if (received < 0) DestroyWindow(window);
     app->stop_emulation();
-    return received < 0 ? 2 : static_cast<int>(message.wParam);
+    const int exit_code = received < 0 ? 2 : static_cast<int>(message.wParam);
+    gain_ground::runtime_log("Exited with code " + std::to_string(exit_code));
+    return exit_code;
 }
